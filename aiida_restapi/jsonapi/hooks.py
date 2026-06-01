@@ -5,6 +5,8 @@ import typing as t
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 
+from aiida_restapi.config import API_CONFIG
+
 from .utils import IncludedItemParamsCache
 
 IncludedItemParams = tuple[t.Union[str, int], str, dict[str, t.Any], dict[str, t.Any]]
@@ -54,15 +56,12 @@ class BaseHook:
         cls,
         *,
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, str | dict[str, t.Any]]:
         """Return link dictionary for the resource.
 
         :param resource_type: The type of the resource.
         :type resource_type: str
-        :param base_api_url: The base URL of the API.
-        :type base_api_url: str
         :param url_id: The URL identifier of the resource.
         :type url_id: str
         :return: A dictionary of links.
@@ -76,7 +75,6 @@ class BaseHook:
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
         """Return relationships dictionary for the resource.
@@ -85,8 +83,6 @@ class BaseHook:
         :type foreign_fields: dict[str, t.Any]
         :param resource_type: The type of the resource.
         :type resource_type: str
-        :param base_api_url: The base URL of the API.
-        :type base_api_url: str
         :param url_id: The URL identifier of the resource.
         :type url_id: str
         :return: A dictionary of relationships.
@@ -173,11 +169,10 @@ class ResourceHook(BaseHook):
         cls,
         *,
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, str | dict[str, t.Any]]:
         return {
-            'self': f'{base_api_url}/{resource_type}/{url_id}',
+            'self': f'{API_CONFIG["PREFIX"]}/{resource_type}/{url_id}',
         }
 
     @classmethod
@@ -186,13 +181,12 @@ class ResourceHook(BaseHook):
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
         return {
             'collection': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}',
+                    'related': f'{API_CONFIG["PREFIX"]}/{resource_type}',
                 }
             }
         }
@@ -225,13 +219,12 @@ class ComputerHook(EntityHook):
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
         extra = {
             'metadata': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/metadata',
+                    'related': f'{API_CONFIG["PREFIX"]}/{resource_type}/{url_id}/metadata',
                 }
             },
         }
@@ -239,7 +232,6 @@ class ComputerHook(EntityHook):
             super().relationships(
                 foreign_fields=foreign_fields,
                 resource_type=resource_type,
-                base_api_url=base_api_url,
                 url_id=url_id,
             )
             | extra
@@ -257,9 +249,9 @@ class GroupHook(EntityHook):
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        base_api_url = API_CONFIG['PREFIX']
         extra = {
             'user': {
                 'links': {
@@ -285,7 +277,6 @@ class GroupHook(EntityHook):
             super().relationships(
                 foreign_fields=foreign_fields,
                 resource_type=resource_type,
-                base_api_url=base_api_url,
                 url_id=url_id,
             )
             | extra
@@ -303,9 +294,9 @@ class NodeHook(EntityHook):
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        base_api_url = API_CONFIG['PREFIX']
         extra = {
             'user': {
                 'links': {
@@ -368,7 +359,6 @@ class NodeHook(EntityHook):
             super().relationships(
                 foreign_fields=foreign_fields,
                 resource_type=resource_type,
-                base_api_url=base_api_url,
                 url_id=url_id,
             )
             | extra
@@ -391,9 +381,9 @@ class LinkHook(BaseHook):
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        base_api_url = API_CONFIG['PREFIX']
         extra = {}
         if source := foreign_fields.get('source', None):
             extra['source'] = {
