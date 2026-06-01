@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from copy import deepcopy
 
 from aiida import orm
 from starlette.requests import Request
@@ -71,15 +72,16 @@ class JsonApiAdapter:
         :rtype: JsonApiResponse
         """
         resource, included = cls._build_resource(
+            request,
             result,
             resource_identity,
             resource_type,
-            include=include,
+            include,
         )
 
         return {
             'links': {
-                'self': str(request.url).replace(str(request.base_url), '/'),
+                'self': cls._build_link(request),
             },
             'data': resource,
             'included': included or None,
@@ -122,6 +124,7 @@ class JsonApiAdapter:
         included = (
             [
                 cls._to_resource(
+                    request,
                     included_identifier,
                     included_attributes,
                     included_foreign_fields,
@@ -142,15 +145,16 @@ class JsonApiAdapter:
         )
 
         child_resource = cls._to_child_resource(
+            request,
             result,
-            pid=pid,
-            parent_type=parent_type,
-            child_type=child_type,
+            pid,
+            parent_type,
+            child_type,
         )
 
         return {
             'links': {
-                'self': str(request.url),
+                'self': cls._build_link(request),
             },
             'data': child_resource,
             'included': included or None,
@@ -193,11 +197,12 @@ class JsonApiAdapter:
 
         for result in results.data:
             resource, included_items = cls._build_resource(
+                request,
                 result,
                 resource_identity,
                 resource_type,
-                include=query_params.include,
-                cache=included_cache,
+                query_params.include,
+                included_cache,
             )
             resources.append(resource)
             included.extend(included_items)
@@ -210,9 +215,9 @@ class JsonApiAdapter:
 
         toplevel_links = cls._build_toplevel_links(
             request,
-            total=results.total,
-            page=query_params.page,
-            page_size=query_params.page_size,
+            results.total,
+            query_params.page,
+            query_params.page_size,
         )
 
         return {
@@ -225,6 +230,7 @@ class JsonApiAdapter:
     @classmethod
     def _build_resource(
         cls,
+        request: Request,
         result: dict[str, t.Any],
         resource_identity: str,
         resource_type: str,
@@ -232,6 +238,9 @@ class JsonApiAdapter:
         cache: IncludedItemParamsCache | None = None,
     ) -> tuple[dict[str, t.Any], list[dict[str, t.Any]]]:
         """Build a JSON:API resource and its included related resources.
+
+        :param request: The incoming request.
+        :type request: Request
         :param result: The result to convert.
         :type result: dict[str, t.Any]
         :param resource_identity: The identity field to use for the resource.
@@ -257,6 +266,7 @@ class JsonApiAdapter:
         included = (
             [
                 cls._to_resource(
+                    request,
                     included_identifier,
                     included_attributes,
                     included_foreign_fields,
@@ -278,6 +288,7 @@ class JsonApiAdapter:
         )
 
         resource = cls._to_resource(
+            request,
             identifier,
             attributes,
             foreign_fields,
@@ -300,6 +311,7 @@ class JsonApiAdapter:
     @classmethod
     def _to_resource(
         cls,
+        request: Request,
         identifier: str | int,
         attributes: dict[str, t.Any],
         foreign_fields: dict[str, t.Any],
@@ -307,8 +319,8 @@ class JsonApiAdapter:
     ) -> dict[str, t.Any]:
         """Convert an AiiDA quantity to a JSON:API resource.
 
-        :param result: The result dictionary to convert.
-        :type result: dict[str, t.Any]
+        :param request: The incoming request.
+        :type request: Request
         :param resource_identity: The identity field to use for the resource.
         :type resource_identity: str
         :param resource_type: The resource type to use for the resource.
@@ -319,11 +331,13 @@ class JsonApiAdapter:
         hook = cls._hook_for(resource_type)
 
         links = hook.links(
+            request,
             resource_type=resource_type,
             url_id=str(identifier),
         )
 
         relationships = hook.relationships(
+            request,
             foreign_fields=foreign_fields,
             resource_type=resource_type,
             url_id=str(identifier),
@@ -340,14 +354,16 @@ class JsonApiAdapter:
     @classmethod
     def _to_child_resource(
         cls,
+        request: Request,
         result: dict[str, t.Any],
-        *,
         pid: str | int,
         parent_type: str,
         child_type: str,
     ) -> dict[str, t.Any]:
-        """Convert an dependent quantity to a single resource JSON:API document.
+        """Convert a dependent quantity to a single resource JSON:API document.
 
+        :param request: The incoming request.
+        :type request: Request
         :param result: The result dictionary to convert.
         :type result: dict[str, t.Any]
         :param pid: The parent resource identifier.
@@ -359,7 +375,7 @@ class JsonApiAdapter:
         :return: The JSON:API resource object.
         :rtype: dict[str, t.Any]
         """
-        root = f'{API_CONFIG["PREFIX"]}/{parent_type}'
+        root = f'{request.scope["root_path"]}{API_CONFIG["PREFIX"]}/{parent_type}'
 
         return {
             'id': pid,
@@ -385,20 +401,20 @@ class JsonApiAdapter:
     def _build_toplevel_links(
         cls,
         request: Request,
-        page_size: int,
-        page: int,
         total: int,
+        page: int,
+        page_size: int,
     ) -> dict[str, str]:
         """Return dict suitable for JSON:API top-level links (self/next/prev/first/last).
 
         :param request: The incoming request.
         :type request: Request
-        :param page_size: The page size.
-        :type page_size: int
-        :param page: The current page.
-        :type page: int
         :param total: The total number of items.
         :type total: int
+        :param page: The current page.
+        :type page: int
+        :param page_size: The page size.
+        :type page_size: int
         :return: The top-level links.
         :rtype: dict[str, str]
         """
@@ -431,7 +447,7 @@ class JsonApiAdapter:
         :rtype: str
         """
         url = request.url
-        q = dict(request.query_params)
+        q = deepcopy(dict(request.query_params))
 
         for k, v in updates.items():
             if v is None:
@@ -440,4 +456,9 @@ class JsonApiAdapter:
                 q[k] = str(v)
 
         url = url.replace_query_params(**q)
-        return str(url).replace(str(request.base_url), '/')
+
+        link = url.path
+        if url.query:
+            link += f'?{url.query}'
+
+        return link

@@ -47,7 +47,7 @@ async def get_server_endpoints(request: Request) -> dict[str, list[dict]]:
         group, methods, description = _get_route_parts(route)
 
         endpoint = {
-            'path': route.path,
+            'path': request.scope['root_path'] + route.path,
             'group': group,
             'methods': methods,
             'description': description,
@@ -73,7 +73,7 @@ async def get_server_endpoints_table(request: Request) -> HTMLResponse:
         if route.path == '/':
             continue
 
-        path = route.path
+        path = request.scope['root_path'] + route.path
         group, methods, description = _get_route_parts(route)
 
         disable_url = (
