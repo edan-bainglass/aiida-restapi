@@ -24,9 +24,11 @@ def create_app() -> FastAPI:
     :rtype: FastAPI
     """
 
+    root_path = os.getenv('AIIDA_RESTAPI_ROOT_PATH', '')
     read_only = os.getenv('AIIDA_RESTAPI_READ_ONLY') == '1'
 
     app = FastAPI()
+    app.state.api_path = f'{root_path}{API_CONFIG["PREFIX"]}'
 
     api_router = APIRouter(prefix=API_CONFIG['PREFIX'])
 

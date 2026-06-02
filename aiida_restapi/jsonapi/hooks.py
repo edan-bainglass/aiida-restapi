@@ -6,8 +6,6 @@ from aiida import orm
 from aiida.common.exceptions import NotExistent
 from fastapi import Request
 
-from aiida_restapi.config import API_CONFIG
-
 from .utils import IncludedItemParamsCache
 
 IncludedItemParams = tuple[t.Union[str, int], str, dict[str, t.Any], dict[str, t.Any]]
@@ -177,9 +175,9 @@ class ResourceHook(BaseHook):
         resource_type: str,
         url_id: str,
     ) -> dict[str, str | dict[str, t.Any]]:
-        relative_path = request.scope['root_path'] + API_CONFIG['PREFIX']
+        api_path = request.app.state.api_path
         return {
-            'self': f'{relative_path}/{resource_type}/{url_id}',
+            'self': f'{api_path}/{resource_type}/{url_id}',
         }
 
     @classmethod
@@ -191,11 +189,11 @@ class ResourceHook(BaseHook):
         resource_type: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
-        relative_path = request.scope['root_path'] + API_CONFIG['PREFIX']
+        api_path = request.app.state.api_path
         return {
             'collection': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}',
+                    'related': f'{api_path}/{resource_type}',
                 }
             }
         }
@@ -231,11 +229,11 @@ class ComputerHook(EntityHook):
         resource_type: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
-        relative_path = request.scope['root_path'] + API_CONFIG['PREFIX']
+        api_path = request.app.state.api_path
         extra = {
             'metadata': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/metadata',
+                    'related': f'{api_path}/{resource_type}/{url_id}/metadata',
                 }
             },
         }
@@ -264,11 +262,11 @@ class GroupHook(EntityHook):
         resource_type: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
-        relative_path = request.scope['root_path'] + API_CONFIG['PREFIX']
+        api_path = request.app.state.api_path
         extra = {
             'user': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/user',
+                    'related': f'{api_path}/{resource_type}/{url_id}/user',
                 },
                 'data': {
                     'id': str(foreign_fields.get('user')),
@@ -277,12 +275,12 @@ class GroupHook(EntityHook):
             },
             'nodes': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/nodes',
+                    'related': f'{api_path}/{resource_type}/{url_id}/nodes',
                 }
             },
             'extras': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/extras',
+                    'related': f'{api_path}/{resource_type}/{url_id}/extras',
                 }
             },
         }
@@ -311,11 +309,11 @@ class NodeHook(EntityHook):
         resource_type: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
-        relative_path = request.scope['root_path'] + API_CONFIG['PREFIX']
+        api_path = request.app.state.api_path
         extra = {
             'user': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/user',
+                    'related': f'{api_path}/{resource_type}/{url_id}/user',
                 },
                 'data': {
                     'id': str(foreign_fields.get('user')),
@@ -329,7 +327,7 @@ class NodeHook(EntityHook):
         if computer_id is not None:
             extra['computer'] = {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/computer',
+                    'related': f'{api_path}/{resource_type}/{url_id}/computer',
                 },
                 'data': {
                     'id': str(computer_id),
@@ -340,32 +338,32 @@ class NodeHook(EntityHook):
         extra |= {
             'groups': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/groups',
+                    'related': f'{api_path}/{resource_type}/{url_id}/groups',
                 }
             },
             'attributes': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/attributes',
+                    'related': f'{api_path}/{resource_type}/{url_id}/attributes',
                 }
             },
             'extras': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/extras',
+                    'related': f'{api_path}/{resource_type}/{url_id}/extras',
                 }
             },
             'repository_metadata': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/repo/metadata',
+                    'related': f'{api_path}/{resource_type}/{url_id}/repo/metadata',
                 }
             },
             'incoming': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/links?direction=incoming',
+                    'related': f'{api_path}/{resource_type}/{url_id}/links?direction=incoming',
                 }
             },
             'outgoing': {
                 'links': {
-                    'related': f'{relative_path}/{resource_type}/{url_id}/links?direction=outgoing',
+                    'related': f'{api_path}/{resource_type}/{url_id}/links?direction=outgoing',
                 }
             },
         }
@@ -400,12 +398,12 @@ class LinkHook(BaseHook):
         resource_type: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
-        relative_path = request.scope['root_path'] + API_CONFIG['PREFIX']
+        api_path = request.app.state.api_path
         extra = {}
         if source := foreign_fields.get('source', None):
             extra['source'] = {
                 'links': {
-                    'related': f'{relative_path}/nodes/{source}',
+                    'related': f'{api_path}/nodes/{source}',
                 },
                 'data': {
                     'id': str(source),
@@ -415,7 +413,7 @@ class LinkHook(BaseHook):
         if target := foreign_fields.get('target', None):
             extra['target'] = {
                 'links': {
-                    'related': f'{relative_path}/nodes/{target}',
+                    'related': f'{api_path}/nodes/{target}',
                 },
                 'data': {
                     'id': str(target),

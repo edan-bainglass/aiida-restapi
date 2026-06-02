@@ -36,6 +36,7 @@ def start(
     :type port: int
     """
 
+    os.environ['AIIDA_RESTAPI_ROOT_PATH'] = root_path
     os.environ['AIIDA_RESTAPI_READ_ONLY'] = '1' if read_only else '0'
 
     click.echo(f'Starting REST API (read_only={read_only}, watch={watch}) on {host}:{port}')

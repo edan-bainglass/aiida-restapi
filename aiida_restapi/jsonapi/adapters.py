@@ -446,7 +446,6 @@ class JsonApiAdapter:
         :return: The updated URL relative to the base URL.
         :rtype: str
         """
-        url = request.url
         q = deepcopy(dict(request.query_params))
 
         for k, v in updates.items():
@@ -455,7 +454,7 @@ class JsonApiAdapter:
             else:
                 q[k] = str(v)
 
-        url = url.replace_query_params(**q)
+        url = request.url.replace_query_params(**q)
 
         link = url.path
         if url.query:
