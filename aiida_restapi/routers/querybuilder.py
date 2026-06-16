@@ -34,10 +34,6 @@ read_router = APIRouter(prefix='/querybuilder')
 async def query_builder(
     request: Request,
     query: QueryBuilderDict,
-    flat: t.Annotated[
-        bool,
-        Query(description='Whether to return results flat.'),
-    ] = False,
     full: t.Annotated[
         bool,
         Query(description='Whether to return full results (minimal=False).'),
@@ -53,23 +49,21 @@ async def query_builder(
         qb = orm.QueryBuilder.from_dict(query_dict)
         total = qb.count()
         qb.limit(limit)
-        results = qb.all(flat=flat)
+        results = qb.dict()
     except Exception as exception:
         raise QueryBuilderException(str(exception)) from exception
 
-    if flat:
-        parsed = _to_resource_result(results, minimal=not full)
-    else:
-        parsed = [_to_resource_result(result, minimal=not full) for result in results]
-
-    result = {
-        'query_id': 'qb-result',
-        'results': parsed,
-    }
+    try:
+        normalized_results = {
+            'query_id': 'qb-result',
+            'results': [normalize_result(result, minimal=not full) for result in results],
+        }
+    except Exception as exception:
+        raise QueryBuilderException(str(exception)) from exception
 
     return JsonApi.resource(
         request,
-        result,
+        normalized_results,
         resource_identity='query_id',
         resource_type='qb-results',
         meta={
@@ -80,20 +74,42 @@ async def query_builder(
     )
 
 
-def _to_resource_result(raw: list[t.Any], minimal: bool = True) -> list[t.Any]:
-    """Convert raw QueryBuilder results to JSON:API serializable format.
+ALIAS_MAP = {
+    'id': 'pk',
+    'dbcomputer_id': 'computer',
+    'user_id': 'user',
+    'dbnode_id': 'node',
+}
 
-    :param raw: The raw results from QueryBuilder.
-    :type raw: list[t.Any]
+
+def normalize_result(
+    result: dict[str, dict[str, t.Any]],
+    minimal: bool = True,
+) -> dict[str, dict[str, t.Any]]:
+    """Serialize any entities in the QueryBuilder result.
+
+    If the result only contains a single projection of the entity, it will be serialized flat.
+    Otherwise, the projections will be normalized, serializing any entities under the '*' key
+    and mapping DB keys to their public aliases (e.g. 'id' -> 'pk').
+
+    :param result: The QueryBuilder result.
+    :type result: dict[str, dict[str, t.Any]]
     :param minimal: Whether to serialize entities in minimal form.
     :type minimal: bool
-    :return: The parsed results.
-    :rtype: list[t.Any]
+    :return: The parsed result.
+    :rtype: dict[str, dict[str, t.Any]]
     """
-    parsed: list[t.Any] = []
-    for item in raw:
-        if isinstance(item, orm.Entity):
-            parsed.append(item.serialize(minimal=minimal))
-        else:
-            parsed.append(item)
-    return parsed
+    for tag, projections in result.items():
+        if len(projections) == 1 and '*' in projections:
+            result[tag] = projections['*'].serialize(minimal=minimal)
+            break
+
+        normalized: dict[str, dict[str, t.Any]] = {}
+        for key, projection in projections.items():
+            if key == '*':
+                normalized[key] = projection.serialize(minimal=minimal)
+            else:
+                normalized[ALIAS_MAP.get(key, key)] = projection
+        result[tag] = normalized
+
+    return result
