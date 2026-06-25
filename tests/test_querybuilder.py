@@ -40,37 +40,12 @@ def test_querybuilder_full(client: TestClient):
         },
     )
     assert response.status_code == 200, response.text
-    result = response.json()['data']['attributes']['results'][0]
+    result = response.json()['data']['attributes']['results'][0]['integer']
     assert 'attributes' in result
     assert 'value' in result['attributes']
     assert result['attributes']['value'] == 1
     assert 'extras' in result
     assert 'repository_metadata' in result
-
-
-@pytest.mark.usefixtures('default_nodes')
-def test_querybuilder_flat(client: TestClient):
-    """Test QueryBuilder result with flat response."""
-    response = client.post(
-        '/querybuilder?flat=true',
-        json={
-            'path': [
-                {
-                    'entity_type': ['data.core.int.Int.', 'data.core.float.Float.'],
-                    'orm_base': 'node',
-                    'tag': 'nodes',
-                },
-            ],
-            'project': {
-                'nodes': [
-                    'attributes.value',
-                ],
-            },
-        },
-    )
-    assert response.status_code == 200, response.text
-    result = response.json()
-    assert result['data']['attributes']['results'] == [1, 1.1]
 
 
 def test_querybuilder_node_in_group(client: TestClient, default_nodes: list[str], default_groups: list[str]):
@@ -113,4 +88,14 @@ def test_querybuilder_node_in_group(client: TestClient, default_nodes: list[str]
     )
     assert response.status_code == 200, response.text
     result = response.json()['data']['attributes']['results']
-    assert result == [group.label, node.pk, node.value]
+    assert result == [
+        {
+            'group': {
+                'label': group.label,
+            },
+            'node': {
+                'pk': node.pk,
+                'attributes.value': node.value,
+            },
+        }
+    ]
