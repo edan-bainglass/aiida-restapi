@@ -436,23 +436,24 @@ class JsonApiAdapter:
         return links
 
     @staticmethod
-    def _build_link(request: Request, **updates: dict[str, str | int | None]) -> str:
+    def _build_link(request: Request, page: int | None = None, page_size: int | None = None) -> str:
         """Return a relative URL with updated query parameters.
 
         :param request: The incoming request.
         :type request: Request
-        :param updates: The query parameter updates.
-        :type updates: dict[str, str | int | None]
+        :param page: The current page.
+        :type page: int | None
+        :param page_size: The page size.
+        :type page_size: int | None
         :return: The updated URL relative to the base URL.
         :rtype: str
         """
         q = deepcopy(dict(request.query_params))
 
-        for k, v in updates.items():
-            if v is None:
-                q.pop(k, None)
-            else:
-                q[k] = str(v)
+        if page is not None:
+            q['page'] = str(page)
+        if page_size is not None:
+            q['page_size'] = str(page_size)
 
         url = request.url.replace_query_params(**q)
 
