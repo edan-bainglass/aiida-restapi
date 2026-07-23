@@ -38,7 +38,7 @@ def test_get_server_endpoints_table(client: TestClient):
 
         # Check that the group, if not empty, is in path immediately after the prefix
         if (group := cols[1].get_text()) != '-':
-            assert path.startswith(f'{client.base_url}{API_CONFIG["PREFIX"]}/{group}')
+            assert path.startswith(f'{API_CONFIG["PREFIX"]}/{group}')
 
         # Check that those endpoints that should be links are indeed links
         method = cols[2].get_text()
