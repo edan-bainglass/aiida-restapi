@@ -98,7 +98,7 @@ warn_untyped_fields = false
 [tool.pytest.ini_options]
 filterwarnings = [
   'ignore:Creating AiiDA configuration folder.*:UserWarning',
-  'ignore::DeprecationWarning:rewrite:',
+  'ignore::DeprecationWarning:pytest:',
   'ignore::DeprecationWarning:lark:',
   'ignore::DeprecationWarning:pytz:',
   'ignore::DeprecationWarning:aiida:',
