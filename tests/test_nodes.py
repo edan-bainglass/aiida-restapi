@@ -238,6 +238,20 @@ def test_get_node(client: TestClient, default_nodes: list[str | None]):
     }
 
 
+def test_get_node_by_pk(client: TestClient):
+    """Test retrieving a node by PK on UUID route."""
+    node = orm.Int(value=11).store()
+    response = client.get(f'/nodes/{node.pk}')
+    assert response.status_code == 200
+    assert response.json()['data']['id'] == node.uuid
+
+
+def test_get_node_invalid_identifier(client: TestClient):
+    """Test invalid identifier format returns 422."""
+    response = client.get('/nodes/not-a-uuid-or-int')
+    assert response.status_code == 422
+
+
 def test_get_node_user(client: TestClient):
     """Test retrieving the user of a single node."""
     node = orm.Int(value=5).store()

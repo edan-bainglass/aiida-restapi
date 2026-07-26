@@ -38,6 +38,20 @@ def test_get_group(client: TestClient, default_groups: list[str]):
         assert response.status_code == 200
 
 
+def test_get_group_by_pk(client: TestClient):
+    """Test retrieving a group by PK on UUID route."""
+    group = orm.Group(label='test_group_pk').store()
+    response = client.get(f'/groups/{group.pk}')
+    assert response.status_code == 200
+    assert response.json()['data']['id'] == group.uuid
+
+
+def test_get_group_invalid_identifier(client: TestClient):
+    """Test invalid identifier format returns 422."""
+    response = client.get('/groups/not-a-uuid-or-int')
+    assert response.status_code == 422
+
+
 def test_get_group_user(client: TestClient):
     """Test retrieving the user of a single group."""
     group = orm.Group(label='test_group_user').store()

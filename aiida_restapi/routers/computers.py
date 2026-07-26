@@ -127,7 +127,7 @@ async def get_computer(
 @with_dbenv()
 async def get_computer_metadata(
     request: Request,
-    pk: str,
+    pk: int,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
@@ -138,7 +138,7 @@ async def get_computer_metadata(
     return JsonApi.child_resource(
         request,
         metadata,
-        pid=str(pk),
+        pid=pk,
         parent_type='computers',
         child_type='metadata',
         include=query_params.include,

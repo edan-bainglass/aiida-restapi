@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from uuid import UUID
 
 from aiida import orm
 from aiida.common import EntryPointError, exceptions
@@ -85,15 +86,16 @@ class NodeService(EntityService[NodeType, NodeModelType]):
 
         return all_formats
 
-    def get_repository_metadata(self, uuid: str) -> dict[str, dict]:
+    def get_repository_metadata(self, identifier: int | UUID) -> dict[str, dict]:
         """Get the repository metadata of a node.
 
-        :param uuid: The uuid of the node to retrieve the repository metadata for.
-        :type uuid: str
+        :param identifier: The identifier of the node to retrieve metadata for.
+        :type identifier: int | UUID
         :return: A dictionary with the repository file metadata.
         :rtype: dict[str, dict]
         """
-        node = self.entity_class.collection.get(uuid=uuid)
+        node = self.entity_class.collection.get(**self._lookup_kwargs(identifier))
+        node_identifier = node.uuid
         total_size = 0
 
         def get_metadata(objects: list[File], path: str | None = None) -> dict[str, dict]:
@@ -126,7 +128,7 @@ class NodeService(EntityService[NodeType, NodeModelType]):
                         'binary': binary,
                         'size': size,
                         'hash': node.base.repository.get_object(obj_name).serialize()['k'],
-                        'download': f'{API_CONFIG["PREFIX"]}/nodes/{uuid}/repo/contents?filename={obj_name}',
+                        'download': f'{API_CONFIG["PREFIX"]}/nodes/{node_identifier}/repo/contents?filename={obj_name}',
                     }
                     total_size += size
 
@@ -139,21 +141,21 @@ class NodeService(EntityService[NodeType, NodeModelType]):
                 'type': 'FILE',
                 'binary': True,
                 'size': total_size,
-                'download': f'{API_CONFIG["PREFIX"]}/nodes/{uuid}/repo/contents',
+                'download': f'{API_CONFIG["PREFIX"]}/nodes/{node_identifier}/repo/contents',
             }
 
         return metadata
 
     def get_links(
         self,
-        uuid: str,
+        identifier: int | UUID,
         direction: t.Literal['incoming', 'outgoing'],
         query_params: QueryBuilderParams = QueryBuilderParams(),
     ) -> PaginatedResults[dict[str, t.Any]]:
         """Get the incoming links of a node.
 
-        :param uuid: The uuid of the node to retrieve the incoming links for.
-        :type uuid: str
+        :param identifier: The identifier of the node to retrieve links for.
+        :type identifier: int | UUID
         :param query_params: The query parameters for filtering, sorting, and pagination.
         :type query_params: QueryBuilderParams
         :param direction: Specify whether to retrieve incoming or outgoing links.
@@ -161,6 +163,9 @@ class NodeService(EntityService[NodeType, NodeModelType]):
         :return: The paginated requested linked nodes.
         :rtype: PaginatedResults
         """
+        node = self.entity_class.collection.get(**self._lookup_kwargs(identifier))
+        node_uuid = node.uuid
+
         qb = (
             orm.QueryBuilder(
                 limit=query_params.page_size,
@@ -174,7 +179,7 @@ class NodeService(EntityService[NodeType, NodeModelType]):
             )
             .append(
                 self.entity_class,
-                filters={self.entity_class.identity_field: uuid},
+                filters={'uuid': node_uuid},
                 joining_keyword=f'with_{direction}',
                 joining_value='link',
                 edge_project=['label', 'type'],
@@ -186,7 +191,6 @@ class NodeService(EntityService[NodeType, NodeModelType]):
         qb.order_by([order_by])
 
         try:
-            node = self.entity_class.collection.get(uuid=uuid)
             total = len(getattr(node.base.links, f'get_{direction}')().all())
             results = qb.all()
         except Exception as exception:
@@ -196,9 +200,9 @@ class NodeService(EntityService[NodeType, NodeModelType]):
         for other_uuid, link_label, link_type in results:
             if direction == 'incoming':
                 source_uuid = other_uuid
-                target_uuid = uuid
+                target_uuid = node_uuid
             else:
-                source_uuid = uuid
+                source_uuid = node_uuid
                 target_uuid = other_uuid
             data.append(
                 {

@@ -6,6 +6,7 @@ import io
 import json
 import typing as t
 from urllib.parse import quote
+from uuid import UUID
 
 import pydantic as pdt
 from aiida import orm
@@ -13,7 +14,6 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions as aiida_exceptions
 from fastapi import APIRouter, Body, Depends, Form, Query, Request, Response, UploadFile
 from fastapi import exceptions as fastapi_exceptions
-from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import ValidationException
 from fastapi.responses import StreamingResponse
 from typing_extensions import TypeAlias
@@ -47,25 +47,30 @@ else:
     NodeConstructorModelUnion = model_registry.ConstructorModelUnion
 
 
-async def unsupported_model_error_handler(
+def handle_request_validation_errors(
     request: Request,
     exception: fastapi_exceptions.RequestValidationError,
-) -> Response:
-    """Return concise validation errors for selected request-validation cases."""
-    if request.method == 'POST' and (
-        request.url.path.endswith('/nodes') or request.url.path.endswith('/nodes/constructor')
-    ):
+) -> Response | None:
+    """Handle special request validation errors cases for node routes.
+
+    :param request: The request that caused the validation error.
+    :type request: Request
+    :param exception: The validation error exception.
+    :type exception: fastapi_exceptions.RequestValidationError
+    :return: A JSON response containing the error in JSON:API format.
+    :rtype: JSONResponse
+    """
+    if request.method == 'POST' and '/nodes' in request.url.path:
         body = getattr(exception, 'body', None)
         if isinstance(body, dict):
             try:
-                which = 'constructor' if request.url.path.endswith('/nodes/constructor') else None
+                which = 'constructor' if request.url.path.endswith('/constructor') else None
                 model_registry.get_post_model_from_payload(body, which)  # type: ignore[arg-type]
             except aiida_exceptions.UnsupportedSchemaError as unsupported:
                 return jsonapi_error(request, unsupported, 422)
             except ValueError:
                 pass
-
-    return await request_validation_exception_handler(request, exception)
+    return None
 
 
 @read_router.get(
@@ -192,7 +197,7 @@ async def get_node_types() -> list:
 
 
 @read_router.get(
-    '/{uuid}',
+    '/{identifier}',
     response_class=JsonApiResponse,
     response_model=aiida.NodeResourceDocument,
     response_model_exclude_none=True,
@@ -205,14 +210,14 @@ async def get_node_types() -> list:
 @with_dbenv()
 async def get_node(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA node by uuid."""
-    result = service.get_one(uuid)
+    """Get AiiDA node by identifier (UUID or PK)."""
+    result = service.get_one(identifier)
     return JsonApi.resource(
         request,
         result,
@@ -223,7 +228,7 @@ async def get_node(
 
 
 @read_router.get(
-    '/{uuid}/user',
+    '/{identifier}/user',
     response_class=JsonApiResponse,
     response_model=aiida.UserResourceDocument,
     response_model_exclude_none=True,
@@ -234,9 +239,12 @@ async def get_node(
     },
 )
 @with_dbenv()
-async def get_node_user(request: Request, uuid: str) -> dict[str, t.Any]:
+async def get_node_user(
+    request: Request,
+    identifier: int | UUID,
+) -> dict[str, t.Any]:
     """Get the user associated with a node."""
-    user = service.get_related_one(uuid, orm.User)
+    user = service.get_related_one(identifier, orm.User)
     return JsonApi.resource(
         request,
         user,
@@ -246,7 +254,7 @@ async def get_node_user(request: Request, uuid: str) -> dict[str, t.Any]:
 
 
 @read_router.get(
-    '/{uuid}/computer',
+    '/{identifier}/computer',
     response_class=JsonApiResponse,
     response_model=aiida.ComputerResourceDocument,
     response_model_exclude_none=True,
@@ -257,9 +265,12 @@ async def get_node_user(request: Request, uuid: str) -> dict[str, t.Any]:
     },
 )
 @with_dbenv()
-async def get_node_computer(request: Request, uuid: str) -> dict[str, t.Any]:
+async def get_node_computer(
+    request: Request,
+    identifier: int | UUID,
+) -> dict[str, t.Any]:
     """Get the computer associated with a node."""
-    computer = service.get_related_one(uuid, orm.Computer)
+    computer = service.get_related_one(identifier, orm.Computer)
     return JsonApi.resource(
         request,
         computer,
@@ -269,7 +280,7 @@ async def get_node_computer(request: Request, uuid: str) -> dict[str, t.Any]:
 
 
 @read_router.get(
-    '/{uuid}/groups',
+    '/{identifier}/groups',
     response_class=JsonApiResponse,
     response_model=aiida.GroupCollectionDocument,
     response_model_exclude_none=True,
@@ -285,14 +296,14 @@ async def get_node_computer(request: Request, uuid: str) -> dict[str, t.Any]:
 @with_dbenv()
 async def get_node_groups(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     query_params: t.Annotated[
         query.CollectionQueryParams,
         Depends(query.collection_query_params),
     ],
 ) -> dict[str, t.Any]:
     """Get the groups of a node."""
-    groups = service.get_related_many(uuid, orm.Group, query_params)
+    groups = service.get_related_many(identifier, orm.Group, query_params)
     return JsonApi.collection(
         request,
         groups,
@@ -303,7 +314,7 @@ async def get_node_groups(
 
 
 @read_router.get(
-    '/{uuid}/attributes',
+    '/{identifier}/attributes',
     response_class=JsonApiResponse,
     response_model=JsonApiResourceDocument,
     response_model_exclude_none=True,
@@ -319,18 +330,19 @@ async def get_node_groups(
 @with_dbenv()
 async def get_node_attributes(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
     """Get the attributes of a node."""
-    attributes = service.get_field(uuid, 'attributes')
+    node = service.load_one(identifier)
+    attributes = service.get_field(identifier, 'attributes')
     return JsonApi.child_resource(
         request,
         attributes,
-        pid=uuid,
+        pid=node.uuid,
         parent_type='nodes',
         child_type='attributes',
         include=query_params.include,
@@ -338,7 +350,7 @@ async def get_node_attributes(
 
 
 @read_router.get(
-    '/{uuid}/extras',
+    '/{identifier}/extras',
     response_class=JsonApiResponse,
     response_model=JsonApiResourceDocument,
     response_model_exclude_none=True,
@@ -354,18 +366,19 @@ async def get_node_attributes(
 @with_dbenv()
 async def get_node_extras(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
     """Get the extras of a node."""
-    extras = service.get_field(uuid, 'extras')
+    node = service.load_one(identifier)
+    extras = service.get_field(identifier, 'extras')
     return JsonApi.child_resource(
         request,
         extras,
-        pid=uuid,
+        pid=node.uuid,
         parent_type='nodes',
         child_type='extras',
         include=query_params.include,
@@ -373,7 +386,7 @@ async def get_node_extras(
 
 
 @read_router.get(
-    '/{uuid}/links',
+    '/{identifier}/links',
     response_class=JsonApiResponse,
     response_model=aiida.LinkCollectionDocument,
     response_model_exclude_none=True,
@@ -386,7 +399,7 @@ async def get_node_extras(
 @with_dbenv()
 async def get_node_links(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     direction: t.Annotated[
         t.Literal['incoming', 'outgoing'],
         Query(description='Specify whether to retrieve incoming or outgoing links.'),
@@ -397,7 +410,7 @@ async def get_node_links(
     ],
 ) -> dict[str, t.Any]:
     """Get the incoming/outgoing links of a node."""
-    links = service.get_links(uuid, direction, query_params)
+    links = service.get_links(identifier, direction, query_params)
     return JsonApi.collection(
         request,
         links,
@@ -408,7 +421,7 @@ async def get_node_links(
 
 
 @read_router.get(
-    '/{uuid}/repo/metadata',
+    '/{identifier}/repo/metadata',
     response_class=JsonApiResponse,
     response_model=JsonApiResourceDocument,
     response_model_exclude_none=True,
@@ -421,18 +434,19 @@ async def get_node_links(
 @with_dbenv()
 async def get_node_repo_file_metadata(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
     """Get the repository file metadata of a node."""
-    metadata = service.get_repository_metadata(uuid)
+    node = service.load_one(identifier)
+    metadata = service.get_repository_metadata(identifier)
     return JsonApi.child_resource(
         request,
         metadata,
-        pid=uuid,
+        pid=node.uuid,
         parent_type='nodes',
         child_type='repo-metadata',
         include=query_params.include,
@@ -449,7 +463,7 @@ def get_file_download_headers(filename: str) -> dict[str, str]:
 
 
 @read_router.get(
-    '/{uuid}/repo/contents',
+    '/{identifier}/repo/contents',
     response_class=StreamingResponse,
     responses={
         404: {'model': errors.NonExistentError, 'description': 'Resource Not Found'},
@@ -459,16 +473,16 @@ def get_file_download_headers(filename: str) -> dict[str, str]:
 )
 @with_dbenv()
 async def get_node_repo_file_contents(
-    uuid: str,
+    identifier: int | UUID,
     filename: t.Annotated[
         str | None,
         Query(description='Filename of repository content to retrieve'),
     ] = None,
 ) -> StreamingResponse:
     """Get the repository contents of a node."""
-    node = orm.load_node(uuid)
+    node = service.load_one(identifier)
     repo = node.base.repository
-    repo_filename = filename.strip('/')[-1] if filename else f'{uuid}.zip'
+    repo_filename = filename.strip('/')[-1] if filename else f'{node.uuid}.zip'
     return StreamingResponse(
         stream_bytes(repo.get_object_content(filename, mode='rb') if filename else repo.get_zipped_objects()),
         media_type=f'application/{"zip" if not filename else "octet-stream"}',
@@ -477,7 +491,7 @@ async def get_node_repo_file_contents(
 
 
 @read_router.get(
-    '/{uuid}/download',
+    '/{identifier}/download',
     response_class=StreamingResponse,
     responses={
         404: {'model': errors.NonExistentError, 'description': 'Resource Not Found'},
@@ -488,7 +502,7 @@ async def get_node_repo_file_contents(
 )
 @with_dbenv()
 async def download_node(
-    uuid: str,
+    identifier: int | UUID,
     format: t.Annotated[
         str | None,
         Query(description='Format to download the node in'),
@@ -498,7 +512,7 @@ async def download_node(
         Query(description='Additional options for archive downloads, provided as a JSON string'),
     ] = None,
 ) -> StreamingResponse:
-    """Download AiiDA node by uuid in a given download format (e.g., JSON, archive).
+    """Download AiiDA node by identifier (UUID or PK) in a given format (e.g., JSON, archive).
 
     The available download formats can be queried using the /nodes/download_formats/ endpoint.
     If downloading as an archive, additional options can be provided as a JSON object via the
@@ -512,12 +526,12 @@ async def download_node(
             'queried using the /nodes/download_formats endpoint.',
         )
 
-    node = orm.load_node(uuid)
+    node = service.load_one(identifier)
 
     if format == 'archive':
         from aiida.tools.archive import create_archive
 
-        filename = f'{uuid}.aiida'
+        filename = f'{node.uuid}.aiida'
 
         if options:
             try:
@@ -531,7 +545,7 @@ async def download_node(
         exported_bytes = archive_path.read_bytes()
         archive_path.unlink()
     elif format in node.get_export_formats():
-        filename = f'{uuid}.{format}'
+        filename = f'{node.uuid}.{format}'
         exported_bytes, _ = node._exportcontent(format)
     else:
         raise ValidationException(
@@ -661,7 +675,7 @@ async def create_node_with_files(
 
 
 @write_router.patch(
-    '/{uuid}',
+    '/{identifier}',
     response_class=JsonApiResponse,
     response_model=aiida.NodeResourceDocument,
     response_model_exclude_none=True,
@@ -678,14 +692,14 @@ async def create_node_with_files(
 @with_dbenv()
 async def update_node(
     request: Request,
-    uuid: str,
+    identifier: int | UUID,
     model: orm.Node.MutableNodeFields,
 ) -> dict[str, t.Any]:
     """Update the mutable fields of an existing AiiDA node.
 
     Updatable fields: 'label', 'description', 'extras'
     """
-    result = service.update(uuid, model)
+    result = service.update(identifier, model)
     return JsonApi.resource(
         request,
         result,
