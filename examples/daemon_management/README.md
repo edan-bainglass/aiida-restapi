@@ -4,10 +4,9 @@
 
 This example shows how to manage the daemon over the web API, such as:
 
-* Getting the daemon status
-* Starting the daemon
-* Stopping the daemon
-
+- Getting the daemon status
+- Starting the daemon
+- Stopping the daemon
 
 ## Instructions
 
@@ -15,27 +14,26 @@ This example shows how to manage the daemon over the web API, such as:
 
 1. Install `aiida-restapi`:
 
-    ```bash
-    pip install aiida-restapi[auth]
-    ```
+   ```bash
+   pip install aiida-restapi
+   ```
 
 1. Start the web API server:
 
-    ```bash
-    uvicorn aiida_restapi:app
-    ```
-
+   ```bash
+   uvicorn aiida_restapi:app
+   ```
 
 ### Client
 
 1. Install Python prerequisites:
 
-    ```bash
-    pip install click requests
-    ```
+   ```bash
+   pip install click requests
+   ```
 
 1. Execute the example script:
 
-    ```bash
-    ./script.py
-    ```
+   ```bash
+   ./script.py
+   ```

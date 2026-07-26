@@ -15,8 +15,6 @@ from aiida_restapi.jsonapi.models.aiida import UserCollectionDocument, UserResou
 from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.services.entity import EntityService
 
-from .auth import UserInDB, get_current_active_user
-
 read_router = APIRouter(prefix='/users')
 write_router = APIRouter(prefix='/users')
 
@@ -128,7 +126,6 @@ async def get_user(
 async def create_user(
     request: Request,
     user_model: orm.User.WriteModel,
-    current_user: t.Annotated[UserInDB, Depends(get_current_active_user)],
 ) -> dict[str, t.Any]:
     """Create new AiiDA user."""
     result = service.add(user_model)

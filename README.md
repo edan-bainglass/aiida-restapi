@@ -12,16 +12,15 @@ Serve e.g. using [`uvicorn`](https://www.uvicorn.org/).
 
 ## Features
 
- * `/users` (GET/POST) and `/users/<id>` (GET) endpoints
- * Authentication via [JSON web tokens](https://jwt.io/introduction) (see `test_auth.py` for the flow; also works via interactive docs)
- * `User` `pydantic` model for validation
- * Automatic documentation at `http://127.0.0.1:8000/docs`
- * Full specification at `http://127.0.0.1:8000/openapi.json`
+- `/users` (GET/POST) and `/users/<id>` (GET) endpoints
+- `User` `pydantic` model for validation
+- Automatic documentation at `http://127.0.0.1:8000/docs`
+- Full specification at `http://127.0.0.1:8000/openapi.json`
 
 ## Installation
 
 ```shell
-pip install aiida-restapi[auth]
+pip install aiida-restapi
 ```
 
 ## Usage
@@ -48,13 +47,16 @@ cd aiida-restapi
 ### Setting up pre-commit
 
 We use pre-commit to take care for the formatting, type checking and linting.
+
 ```shell
 pip install -e .[pre-commit]  # install extra dependencies
 pre-commit run # running pre-commit on changes
 pre-commit run --all-files # running pre-commit on every file
 pre-commit run pylint --all-files # run only the linter on every file
 ```
+
 One can also set up pre-commit to be run on every commit
+
 ```shell
 pre-commit install
 # pre-commit uninstall # to disable it again
@@ -63,13 +65,16 @@ pre-commit install
 ### Running tests
 
 With tox the tests can be run
+
 ```shell
 pip install tox
 tox -e py311 # run all tests for Python 3.11
 tox -av # see all supported environments
 ```
-tox will creat a custom environment to run the tests in. If you want to run the
+
+tox will create a custom environment to run the tests in. If you want to run the
 tests inside your current environment
+
 ```shell
 pip install -e .[testing]  # install extra dependencies
 pytest -v

@@ -12,46 +12,45 @@ Then, the status of the calculation is queried for and when it is done, the fina
 
 1. Install `aiida-restapi`:
 
-    ```bash
-    pip install aiida-restapi[auth]
-    ```
+   ```bash
+   pip install aiida-restapi
+   ```
 
 1. Start the web API server:
 
-    ```bash
-    uvicorn aiida_restapi:app
-    ```
+   ```bash
+   uvicorn aiida_restapi:app
+   ```
 
 1. Configure an `InstalledCode` to run the `core.arithmetic.add` plugin on a `Computer`:
 
-    ```bash
-    verdi computer setup -n -L localhost -H localhost -T core.local -S core.direct -w /tmp
-    verdi computer configure core.local localhost -n
-    verdi code create core.code.installed \
-        --non-interactive \
-        --label 'bash' \
-        --computer localhost \
-        --filepath-executable /bin/bash \
-        --default-calc-job-plugin 'core.arithmetic.add'
-    ```
+   ```bash
+   verdi computer setup -n -L localhost -H localhost -T core.local -S core.direct -w /tmp
+   verdi computer configure core.local localhost -n
+   verdi code create core.code.installed \
+       --non-interactive \
+       --label 'bash' \
+       --computer localhost \
+       --filepath-executable /bin/bash \
+       --default-calc-job-plugin 'core.arithmetic.add'
+   ```
 
 1. Start the daemon
 
-    ```bash
-    verdi daemon start
-    ```
-
+   ```bash
+   verdi daemon start
+   ```
 
 ### Client
 
 1. Install Python prerequisites:
 
-    ```bash
-    pip install click requests
-    ```
+   ```bash
+   pip install click requests
+   ```
 
 1. Execute the example script:
 
-    ```bash
-    ./script.py
-    ```
+   ```bash
+   ./script.py
+   ```
