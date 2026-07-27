@@ -98,10 +98,11 @@ async def get_nodes_schema(
 ) -> dict[str, t.Any]:
     """Get JSON schema for the base AiiDA node 'read' model."""
     if not node_type:
-        return orm.Node.ReadModel.model_json_schema()
-    Model = model_registry.get_model(node_type, which)
-    if not Model:
-        raise restapi_exceptions.SchemaNotSupported(f"'{node_type}' does not support {which} schema")
+        Model = orm.Node.ReadModel if which == 'read' else orm.Node.WriteModel
+    else:
+        Model = model_registry.get_model(node_type, which)
+        if not Model:
+            raise restapi_exceptions.SchemaNotSupported(f"'{node_type}' does not support {which} schema")
     return Model.model_json_schema()
 
 
