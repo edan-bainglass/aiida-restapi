@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+import typing as t
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
@@ -47,7 +48,7 @@ async def get_daemon_status() -> DaemonStatus:
     },
 )
 @with_dbenv()
-async def get_daemon_worker() -> dict[str, DaemonWorker]:
+async def get_daemon_worker() -> dict[str, dict[str, t.Any]]:
     """Return daemon worker metadata."""
     client = get_daemon_client()
 
@@ -67,7 +68,7 @@ async def get_daemon_worker() -> dict[str, DaemonWorker]:
     },
 )
 @with_dbenv()
-async def start_daemon() -> DaemonStatus:
+async def start_daemon() -> dict[str, t.Any]:
     """Start the daemon."""
     client = get_daemon_client()
 
@@ -77,7 +78,10 @@ async def start_daemon() -> DaemonStatus:
     client.start_daemon()
     response = client.get_numprocesses()
 
-    return DaemonStatus(running=True, num_workers=response['numprocesses'])
+    return {
+        'running': True,
+        'num_workers': response['numprocesses'],
+    }
 
 
 @write_router.post(
@@ -88,7 +92,7 @@ async def start_daemon() -> DaemonStatus:
     },
 )
 @with_dbenv()
-async def stop_daemon() -> DaemonStatus:
+async def stop_daemon() -> dict[str, t.Any]:
     """Stop the daemon."""
     client = get_daemon_client()
 
@@ -97,7 +101,10 @@ async def stop_daemon() -> DaemonStatus:
 
     client.stop_daemon()
 
-    return DaemonStatus(running=False, num_workers=None)
+    return {
+        'running': False,
+        'num_workers': None,
+    }
 
 
 @write_router.post(
@@ -108,7 +115,7 @@ async def stop_daemon() -> DaemonStatus:
     },
 )
 @with_dbenv()
-async def restart_daemon() -> DaemonStatus:
+async def restart_daemon() -> dict[str, t.Any]:
     """Restart the daemon."""
     client = get_daemon_client()
 
@@ -117,7 +124,10 @@ async def restart_daemon() -> DaemonStatus:
 
     client.restart_daemon()
 
-    return DaemonStatus(running=True, num_workers=client.get_numprocesses()['numprocesses'])
+    return {
+        'running': True,
+        'num_workers': client.get_numprocesses()['numprocesses'],
+    }
 
 
 async def _wait_for_num_workers(
@@ -148,7 +158,7 @@ async def _wait_for_num_workers(
     },
 )
 @with_dbenv()
-async def increase_daemon_worker() -> DaemonStatus:
+async def increase_daemon_worker() -> dict[str, t.Any]:
     """Increase the number of daemon workers by one."""
     client = get_daemon_client()
 
@@ -159,7 +169,10 @@ async def increase_daemon_worker() -> DaemonStatus:
     client.increase_workers(1)
     num_workers = await _wait_for_num_workers(initial + 1)
 
-    return DaemonStatus(running=True, num_workers=num_workers)
+    return {
+        'running': True,
+        'num_workers': num_workers,
+    }
 
 
 @write_router.post(
@@ -170,7 +183,7 @@ async def increase_daemon_worker() -> DaemonStatus:
     },
 )
 @with_dbenv()
-async def decrease_daemon_worker() -> DaemonStatus:
+async def decrease_daemon_worker() -> dict[str, t.Any]:
     """Decrease the number of daemon workers by one."""
     client = get_daemon_client()
 
@@ -181,4 +194,7 @@ async def decrease_daemon_worker() -> DaemonStatus:
     client.decrease_workers(1)
     num_workers = await _wait_for_num_workers(max(initial - 1, 0))
 
-    return DaemonStatus(running=True, num_workers=num_workers)
+    return {
+        'running': True,
+        'num_workers': num_workers,
+    }
