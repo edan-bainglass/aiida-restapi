@@ -9,10 +9,10 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from fastapi import APIRouter, Depends, Query, Request
 
 from aiida_restapi.common import query
+from aiida_restapi.common.responses import JsonApiResponse, JsonSchemaResponse
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.jsonapi.models.aiida import UserCollectionDocument, UserResourceDocument
-from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.services.entity import EntityService
 
 read_router = APIRouter(prefix='/users')
@@ -23,6 +23,7 @@ service = EntityService[orm.User, orm.User.ReadModel](orm.User)
 
 @read_router.get(
     '/schema',
+    response_class=JsonSchemaResponse,
     response_model=dict[str, t.Any],
     responses={
         422: {'model': errors.RequestValidationError, 'description': 'Validation Error'},

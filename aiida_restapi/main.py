@@ -12,11 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from aiida_restapi.common import exceptions as restapi_exceptions
+from aiida_restapi.common.responses import JsonApiResponse
 from aiida_restapi.common.types import RequestValidationErrorHandler
 from aiida_restapi.config import API_CONFIG, CORS_ALLOW_ORIGIN_REGEX, CORS_ORIGIN_URLS
 from aiida_restapi.graphql import main
 from aiida_restapi.jsonapi.errors import jsonapi_error
-from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.routers import computers, daemon, groups, nodes, querybuilder, server, submit, tests, users
 
 

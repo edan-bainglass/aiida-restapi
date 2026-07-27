@@ -1,8 +1,9 @@
 from fastapi.encoders import jsonable_encoder
 from fastapi.requests import Request
 
+from aiida_restapi.common.responses import JsonApiResponse
+
 from .models.base import JsonApiErrorDocument
-from .responses import JsonApiResponse
 
 
 def jsonapi_error(
