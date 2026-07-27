@@ -5,12 +5,6 @@ from __future__ import annotations
 import typing as t
 from dataclasses import dataclass, field
 
-from fastapi import Request
-from fastapi.encoders import jsonable_encoder
-
-from aiida_restapi.jsonapi.models.base import JsonApiErrorDocument
-from aiida_restapi.jsonapi.responses import JsonApiResponse
-
 CacheBucket = dict[str, tuple[t.Union[str, int], str, dict[str, t.Any], dict[str, t.Any]]]
 
 
@@ -38,39 +32,3 @@ class IncludedItemParamsCache:
             bucket: CacheBucket = {}
             self.buckets[resource_type] = bucket
             return bucket
-
-
-def jsonapi_error(
-    request: Request,
-    exception: Exception,
-    status_code: int,
-) -> JsonApiResponse:
-    """Generate a JSON:API compliant error response.
-
-    :param request: The incoming request.
-    :type request: Request
-    :param exception: The exception that was raised.
-    :type exception: Exception
-    :param status_code: The HTTP status code for the response.
-    :type status_code: int
-    :return: A JSON response containing the error in JSON:API format.
-    :rtype: JsonApiResponse
-    """
-    return JsonApiResponse(
-        status_code=status_code,
-        content=jsonable_encoder(
-            obj=JsonApiErrorDocument(
-                links={
-                    'self': str(request.url),
-                },
-                errors=[
-                    {
-                        'title': exception.__class__.__name__,
-                        'status': str(status_code),
-                        'detail': str(exception),
-                    },
-                ],
-            ),
-            exclude_none=True,
-        ),
-    )

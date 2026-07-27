@@ -22,10 +22,10 @@ from aiida_restapi.common import query
 from aiida_restapi.common.types import EntityIdentifier
 from aiida_restapi.config import API_CONFIG
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
+from aiida_restapi.jsonapi.errors import jsonapi_error
 from aiida_restapi.jsonapi.models import aiida, errors
 from aiida_restapi.jsonapi.models.base import JsonApiResourceDocument
 from aiida_restapi.jsonapi.responses import JsonApiResponse
-from aiida_restapi.jsonapi.utils import jsonapi_error
 from aiida_restapi.models.node import NodeModelRegistry, NodeStatistics, NodeType
 from aiida_restapi.services.node import NodeService
 
