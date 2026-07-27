@@ -11,7 +11,7 @@ import pydantic as pdt
 from aiida import orm
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions as aiida_exceptions
-from fastapi import APIRouter, Body, Depends, Form, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, Form, Query, Request, UploadFile
 from fastapi import exceptions as fastapi_exceptions
 from fastapi.exceptions import ValidationException
 from fastapi.responses import StreamingResponse
@@ -50,7 +50,7 @@ else:
 def handle_request_validation_errors(
     request: Request,
     exception: fastapi_exceptions.RequestValidationError,
-) -> Response | None:
+) -> JsonApiResponse | None:
     """Handle special request validation errors cases for node routes.
 
     :param request: The request that caused the validation error.
@@ -58,7 +58,7 @@ def handle_request_validation_errors(
     :param exception: The validation error exception.
     :type exception: fastapi_exceptions.RequestValidationError
     :return: A JSON response containing the error in JSON:API format.
-    :rtype: JSONResponse
+    :rtype: JsonApiResponse
     """
     if request.method == 'POST' and '/nodes' in request.url.path:
         body = getattr(exception, 'body', None)

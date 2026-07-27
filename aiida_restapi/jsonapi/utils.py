@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
 
 from aiida_restapi.jsonapi.models.base import JsonApiErrorDocument
+from aiida_restapi.jsonapi.responses import JsonApiResponse
 
 CacheBucket = dict[str, tuple[t.Union[str, int], str, dict[str, t.Any], dict[str, t.Any]]]
 
@@ -44,7 +44,7 @@ def jsonapi_error(
     request: Request,
     exception: Exception,
     status_code: int,
-) -> JSONResponse:
+) -> JsonApiResponse:
     """Generate a JSON:API compliant error response.
 
     :param request: The incoming request.
@@ -54,9 +54,9 @@ def jsonapi_error(
     :param status_code: The HTTP status code for the response.
     :type status_code: int
     :return: A JSON response containing the error in JSON:API format.
-    :rtype: JSONResponse
+    :rtype: JsonApiResponse
     """
-    return JSONResponse(
+    return JsonApiResponse(
         status_code=status_code,
         content=jsonable_encoder(
             obj=JsonApiErrorDocument(
