@@ -2,8 +2,6 @@ const out = document.getElementById("out");
 const clientError = document.getElementById("clientError");
 const fileRows = document.getElementById("fileRows");
 const successLink = document.getElementById("successLink");
-const authStatus = document.getElementById("authStatus");
-const logoutBtn = document.getElementById("logoutBtn");
 const attributesModeBtn = document.getElementById("attributesModeBtn");
 const constructorModeBtn = document.getElementById("constructorModeBtn");
 const writeModeInput = document.getElementById("writeMode");
@@ -20,7 +18,6 @@ const argumentsRow = document.getElementById("argumentsRow");
 const nodeTypeSelect = document.getElementById("nodeTypeSelect");
 
 const API_PREFIX = document.body.dataset.apiPrefix;
-const TOKEN_STORAGE_KEY = "aiida_restapi_access_token";
 const constructorSupportCache = new Map();
 
 function getWriteMode() {
@@ -75,7 +72,6 @@ async function supportsConstructor(nodeType) {
     return constructorSupportCache.get(nodeType);
   }
 
-  const token = getAccessToken();
   const endpoint =
     API_PREFIX +
     "/nodes/schema?type=" +
@@ -87,7 +83,6 @@ async function supportsConstructor(nodeType) {
       method: "GET",
       headers: {
         Accept: "application/json",
-        ...(token ? { Authorization: "Bearer " + token } : {}),
       },
     });
 
@@ -116,28 +111,6 @@ async function updateConstructorModeAvailability() {
   if (!supported && getWriteMode() === "constructor") {
     setWriteMode("attributes");
   }
-}
-
-function getAccessToken() {
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-function setAccessToken(token) {
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-  updateAuthUi();
-}
-
-function clearAccessToken() {
-  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-  updateAuthUi();
-}
-
-function updateAuthUi() {
-  const token = getAccessToken();
-  authStatus.textContent = token
-    ? "Authenticated (token stored)"
-    : "Not authenticated";
-  logoutBtn.disabled = !token;
 }
 
 function setClientError(msg) {
@@ -352,59 +325,6 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   clearSuccessLink();
 });
 
-document.getElementById("authBtn").addEventListener("click", async () => {
-  setClientError("");
-  clearSuccessLink();
-
-  const email = document.getElementById("authEmail").value.trim();
-  const password = document.getElementById("authPassword").value;
-
-  const ENDPOINT = API_PREFIX + "/auth/token";
-  out.textContent = "Authenticating at: " + ENDPOINT + "\n";
-
-  try {
-    const resp = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: new URLSearchParams({ username: email, password }),
-    });
-
-    const { contentType, text } = await readResponse(resp);
-
-    let bodyJson = null;
-    if (isJsonContentType(contentType)) {
-      try {
-        bodyJson = JSON.parse(text);
-      } catch {}
-    }
-
-    if (!resp.ok) {
-      out.textContent += "\nAuth failed:\n" + text;
-      return;
-    }
-
-    if (!bodyJson || !bodyJson.access_token) {
-      out.textContent +=
-        "\nAuth response did not include access_token:\n" + text;
-      return;
-    }
-
-    setAccessToken(bodyJson.access_token);
-    out.textContent += "\nAuth OK. Token stored in localStorage.\n";
-  } catch (err) {
-    out.textContent = "Auth request error: " + err;
-  }
-});
-
-logoutBtn.addEventListener("click", () => {
-  clearAccessToken();
-  setClientError("");
-  clearSuccessLink();
-});
-
 document.getElementById("sendBtn").addEventListener("click", async () => {
   setClientError("");
   clearSuccessLink();
@@ -508,7 +428,6 @@ document.getElementById("sendBtn").addEventListener("click", async () => {
 
   try {
     let resp;
-    const token = getAccessToken();
 
     if (!hasFiles) {
       resp = await fetch(ENDPOINT, {
@@ -516,7 +435,6 @@ document.getElementById("sendBtn").addEventListener("click", async () => {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...(token ? { Authorization: "Bearer " + token } : {}),
         },
         body: JSON.stringify(params),
       });
@@ -568,7 +486,6 @@ document.getElementById("sendBtn").addEventListener("click", async () => {
         method: "POST",
         headers: {
           Accept: "application/json",
-          ...(token ? { Authorization: "Bearer " + token } : {}),
         },
         body: fd,
       });
@@ -625,5 +542,4 @@ document.getElementById("sendBtn").addEventListener("click", async () => {
 ensureAtLeastOneRow();
 updateMutationModeUi();
 updateWriteModeUi();
-updateAuthUi();
 void updateConstructorModeAvailability();

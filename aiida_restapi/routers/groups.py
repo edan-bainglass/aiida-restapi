@@ -21,8 +21,6 @@ from aiida_restapi.jsonapi.models.base import JsonApiResourceDocument
 from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.services.entity import EntityService
 
-from .auth import UserInDB, get_current_active_user
-
 read_router = APIRouter(prefix='/groups')
 write_router = APIRouter(prefix='/groups')
 
@@ -226,7 +224,6 @@ async def get_group_extras(
 async def create_group(
     request: Request,
     group_model: orm.Group.WriteModel,
-    current_user: t.Annotated[UserInDB, Depends(get_current_active_user)],
 ) -> dict[str, t.Any]:
     """Create new AiiDA group."""
     result = service.add(group_model)

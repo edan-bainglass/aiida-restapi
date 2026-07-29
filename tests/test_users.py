@@ -44,7 +44,6 @@ def test_get_user(client: TestClient, default_users: list[int | None]):
 
 
 @pytest.mark.anyio
-@pytest.mark.usefixtures('authenticate')
 async def test_create_user(async_client: AsyncClient):
     """Test creating a new user."""
     response = await async_client.post('/users', json={'first_name': 'New', 'email': 'aiida@localhost'})

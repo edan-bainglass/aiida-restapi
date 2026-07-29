@@ -57,7 +57,6 @@ def test_get_computer_metadata(client: TestClient):
     assert response.json()['data']['attributes'] == metadata
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_computer(client: TestClient):
     """Test creating a new computer."""
     response = client.post(

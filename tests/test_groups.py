@@ -66,7 +66,6 @@ def test_get_group_extras(client: TestClient):
     assert response.json()['data']['attributes'] == {'extra_key': 'extra_value'}
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_group(client: TestClient):
     """Test creating a new group."""
     response = client.post('/groups', json={'label': 'test_label_create'})

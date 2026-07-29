@@ -6,12 +6,10 @@ import typing as t
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from aiida_restapi.jsonapi.models import errors
-
-from .auth import UserInDB, get_current_active_user
 
 read_router = APIRouter(prefix='/daemon')
 write_router = APIRouter(prefix='/daemon')
@@ -52,9 +50,7 @@ async def get_daemon_status() -> DaemonStatusModel:
     },
 )
 @with_dbenv()
-async def get_daemon_start(
-    current_user: t.Annotated[UserInDB, Depends(get_current_active_user)],
-) -> DaemonStatusModel:
+async def get_daemon_start() -> DaemonStatusModel:
     """Start the daemon."""
     client = get_daemon_client()
 
@@ -75,9 +71,7 @@ async def get_daemon_start(
     },
 )
 @with_dbenv()
-async def get_daemon_stop(
-    current_user: t.Annotated[UserInDB, Depends(get_current_active_user)],
-) -> DaemonStatusModel:
+async def get_daemon_stop() -> DaemonStatusModel:
     """Stop the daemon."""
     client = get_daemon_client()
 

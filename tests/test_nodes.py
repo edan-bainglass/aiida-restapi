@@ -342,7 +342,6 @@ def test_get_node_file_contents(client: TestClient, array_data_node: orm.ArrayDa
     assert np.array_equal(array, array_data_node.get_array(default))
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_dict(client: TestClient):
     """Test creating a new dict."""
     response = client.post(
@@ -356,7 +355,6 @@ def test_create_dict(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_dict_constructor_args(client: TestClient):
     """Test creating a new dict using constructor args payload discrimination."""
     response = client.post(
@@ -376,7 +374,6 @@ def test_create_dict_constructor_args(client: TestClient):
     assert attributes['y'] == 2
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_node_reject_both_attributes_and_args(client: TestClient):
     """Test creating a node with both attributes and args is rejected."""
     response = client.post(
@@ -390,7 +387,6 @@ def test_create_node_reject_both_attributes_and_args(client: TestClient):
     assert response.status_code == 422, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_node_constructor_not_supported(client: TestClient):
     """Test constructor payload for unsupported type returns concise validation error."""
     response = client.post(
@@ -406,7 +402,6 @@ def test_create_node_constructor_not_supported(client: TestClient):
 
 
 @pytest.mark.anyio
-@pytest.mark.usefixtures('authenticate')
 async def test_create_code(async_client: AsyncClient, default_computers: list[int | None]):
     """Test creating a new Code."""
     for comp_id in default_computers:
@@ -424,7 +419,6 @@ async def test_create_code(async_client: AsyncClient, default_computers: list[in
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_list(client: TestClient):
     """Test creating a new list."""
     response = client.post(
@@ -437,7 +431,6 @@ def test_create_list(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_int(client: TestClient):
     """Test creating a new Int."""
     response = client.post(
@@ -450,7 +443,6 @@ def test_create_int(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_float(client: TestClient):
     """Test creating a new Float."""
     response = client.post(
@@ -463,7 +455,6 @@ def test_create_float(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_string(client: TestClient):
     """Test creating a new string."""
     response = client.post(
@@ -476,7 +467,6 @@ def test_create_string(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_bool(client: TestClient):
     """Test creating a new Bool."""
     response = client.post(
@@ -489,7 +479,6 @@ def test_create_bool(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_structure_data(client: TestClient):
     """Test creating a new StructureData."""
     response = client.post(
@@ -530,7 +519,6 @@ def test_create_structure_data(client: TestClient):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_single_file(client: TestClient):
     """Testing file upload"""
     files = [
@@ -563,7 +551,6 @@ def test_create_single_file(client: TestClient):
     assert metadata['test_file.txt']['binary'] is False
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_single_file_binary(client: TestClient):
     """Testing binary file upload"""
     binary_content = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09'
@@ -597,7 +584,6 @@ def test_create_single_file_binary(client: TestClient):
     assert metadata['binary_file.bin']['binary'] is True
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_folder_data(client: TestClient):
     """Testing folder upload"""
     files = [
@@ -646,7 +632,6 @@ def test_create_folder_data(client: TestClient):
         assert objects[filename]['binary'] is False
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_node_with_files_has_zipped_metadata(client: TestClient):
     """Test link for zipped repo content is present when creating node with files."""
     files = [
@@ -696,7 +681,6 @@ def test_create_node_with_files_has_zipped_metadata(client: TestClient):
         ('data.core.str.Str.', 5),
     ],
 )
-@pytest.mark.usefixtures('authenticate')
 def test_create_node_wrong_value(client: TestClient, node_type: str, value: t.Any):
     """Test creating a new node with wrong value."""
     response = client.post(
@@ -709,7 +693,7 @@ def test_create_node_wrong_value(client: TestClient, node_type: str, value: t.An
     assert response.status_code == 422, response.content
 
 
-@pytest.mark.usefixtures('default_computers', 'authenticate')
+@pytest.mark.usefixtures('default_computers')
 def test_create_unknown_entry_point(client: TestClient):
     """Test error message when specifying unknown ``entry_point``."""
     response = client.post(
@@ -722,7 +706,7 @@ def test_create_unknown_entry_point(client: TestClient):
     assert response.status_code == 422, response.content
 
 
-@pytest.mark.usefixtures('default_computers', 'authenticate')
+@pytest.mark.usefixtures('default_computers')
 def test_create_additional_attribute(client: TestClient):
     """Test adding additional properties are rejected."""
     response = client.post(
@@ -738,7 +722,6 @@ def test_create_additional_attribute(client: TestClient):
     assert response.status_code == 422, response.content
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_create_bool_with_extra(client: TestClient):
     """Test creating a new Bool with extra."""
     response = client.post(
@@ -759,7 +742,6 @@ def test_create_bool_with_extra(client: TestClient):
     assert extras['extra_two'] == 'value_2'
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_update_node(client: TestClient, default_nodes: list[str | None]):
     """Test updating an existing node."""
     node_id = default_nodes[0]

@@ -77,19 +77,13 @@ async def get_server_endpoints_table(request: Request) -> HTMLResponse:
         group, methods, description = _get_route_parts(route)
 
         disable_url = (
-            (
-                isinstance(route, APIRoute)
-                and any(
-                    param
-                    for param in route.dependant.path_params
-                    + route.dependant.query_params
-                    + route.dependant.body_params
-                    if param.required
-                )
+            isinstance(route, APIRoute)
+            and any(
+                param
+                for param in route.dependant.path_params + route.dependant.query_params + route.dependant.body_params
+                if param.required
             )
-            or 'POST' in (route.methods or {})
-            or 'auth' in path
-        )
+        ) or 'POST' in (route.methods or {})
 
         path_row = path if disable_url else f'<a href="{path}">{path}</a>'
 

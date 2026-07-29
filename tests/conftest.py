@@ -18,10 +18,8 @@ from httpx import ASGITransport, AsyncClient
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from aiida_restapi import config
 from aiida_restapi.config import API_CONFIG
 from aiida_restapi.main import create_app
-from aiida_restapi.routers.auth import UserInDB, get_current_user
 
 pytest_plugins = ['aiida.tools.pytest_fixtures']
 
@@ -235,22 +233,6 @@ def array_data_node():
     """Populate database with downloadable node (implementing a _prepare_* function)."""
 
     return orm.ArrayData(np.arange(4)).store()
-
-
-@pytest.fixture(scope='function')
-def authenticate(app):
-    """Authenticate user.
-
-    Since this goes via modifying the app, undo modifications afterwards.
-    """
-
-    async def logged_in_user(token=None):  # pylint: disable=unused-argument
-        """Fake active user."""
-        return UserInDB(**config.fake_users_db['johndoe@example.com'])
-
-    app.dependency_overrides[get_current_user] = logged_in_user
-    yield
-    app.dependency_overrides = {}
 
 
 def mutate_mapping(

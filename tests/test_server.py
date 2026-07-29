@@ -42,7 +42,7 @@ def test_get_server_endpoints_table(client: TestClient):
 
         # Check that those endpoints that should be links are indeed links
         method = cols[2].get_text()
-        if method == 'GET' and 'auth' not in path and '{' not in path:
+        if method == 'GET' and '{' not in path:
             assert cols[0].find('a') is not None
         else:
             assert cols[0].find('a') is None

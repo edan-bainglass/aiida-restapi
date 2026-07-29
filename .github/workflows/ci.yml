@@ -60,7 +60,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install -e .[testing,auth]
+          pip install -e .[testing]
 
       - name: Run test suite
         env:

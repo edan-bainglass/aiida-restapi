@@ -9,7 +9,6 @@ from httpx import AsyncClient
 
 
 @pytest.mark.anyio
-@pytest.mark.usefixtures('authenticate')
 async def test_add_process(async_client: AsyncClient, default_test_add_process: list[str]):
     """Test adding new process"""
     code_id, x_id, y_id = default_test_add_process
@@ -31,7 +30,6 @@ async def test_add_process(async_client: AsyncClient, default_test_add_process: 
     assert response.status_code == 200
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_add_process_invalid_entry_point(client: TestClient, default_test_add_process: list[str]):
     """Test adding new process with invalid entry point"""
     code_id, x_id, y_id = default_test_add_process
@@ -53,7 +51,6 @@ def test_add_process_invalid_entry_point(client: TestClient, default_test_add_pr
     assert response.status_code == 422
 
 
-@pytest.mark.usefixtures('authenticate')
 def test_add_process_invalid_node_id(client: TestClient, default_test_add_process):
     """Test adding new process with invalid Node ID"""
     code_id, x_id, _ = default_test_add_process
@@ -78,7 +75,6 @@ def test_add_process_invalid_node_id(client: TestClient, default_test_add_proces
 
 
 @pytest.mark.anyio
-@pytest.mark.usefixtures('authenticate')
 async def test_add_process_nested_inputs(async_client: AsyncClient, default_test_add_process):
     """Test adding new process that has nested inputs"""
     code_id, _, _ = default_test_add_process

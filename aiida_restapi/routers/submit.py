@@ -8,14 +8,12 @@ from aiida import engine
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 from aiida.plugins.entry_point import load_entry_point_from_string
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import aiida, errors
 from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.models.process import SubmittedProcess
-
-from .auth import UserInDB, get_current_active_user
 
 write_router = APIRouter(prefix='/submit')
 
@@ -34,7 +32,6 @@ write_router = APIRouter(prefix='/submit')
 async def submit_process(
     request: Request,
     process: SubmittedProcess,
-    current_user: t.Annotated[UserInDB, Depends(get_current_active_user)],
 ) -> dict[str, t.Any]:
     """Submit new AiiDA process."""
     try:
