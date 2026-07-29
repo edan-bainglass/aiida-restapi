@@ -7,6 +7,7 @@ import typing as t
 from aiida import orm
 from aiida.cmdline.utils.decorators import with_dbenv
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import PlainValidator
 
 from aiida_restapi.common import query
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
@@ -19,6 +20,16 @@ read_router = APIRouter(prefix='/users')
 write_router = APIRouter(prefix='/users')
 
 service = EntityService[orm.User, orm.User.ReadModel](orm.User)
+
+
+def validate_user_email(value: str) -> str:
+    if value.count('@') != 1:
+        raise ValueError('Invalid email address - must contain exactly one "@"')
+    return value
+
+
+UserEmail: t.TypeAlias = t.Annotated[str, PlainValidator(validate_user_email)]
+UserIdentifier: t.TypeAlias = int | UserEmail
 
 
 @read_router.get(
@@ -79,7 +90,7 @@ async def get_users(
 
 
 @read_router.get(
-    '/{pk}',
+    '/{identifier}',
     response_class=JsonApiResponse,
     response_model=UserResourceDocument,
     response_model_exclude_none=True,
@@ -92,14 +103,19 @@ async def get_users(
 @with_dbenv()
 async def get_user(
     request: Request,
-    pk: int,
+    identifier: UserIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA user by pk."""
-    result = service.get_one(pk)
+    """Get AiiDA user."""
+    # HACK AiiDA User does not have a UUID - see https://github.com/aiidateam/aiida-core/issues/6174
+    key = 'pk' if isinstance(identifier, int) else 'email'
+    print(key, identifier)
+    user = orm.User.collection.get(**{key: identifier})  # we need the EntityIdentifier-compatible user pk
+    assert user.pk  # appeasing mypy - something is terribly wrong if pk is None!
+    result = service.get_one(user.pk)
     return JsonApi.resource(
         request,
         result,
