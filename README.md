@@ -25,13 +25,23 @@ pip install aiida-restapi
 
 ## Usage
 
-```shell
-# start rest api
-uvicorn aiida_restapi:app
+To start the REST API, run:
 
-# start rest api and reload for changes (for development)
-uvicorn aiida_restapi:app --reload
+```shell
+aiida_restapi start [OPTIONS]
 ```
+
+### Options
+
+- `--root-path` Root path for the API (default: /)
+- `--host` Host to listen on (default: 127.0.0.1)
+- `--port` Port to listen on (default: 8000)
+- `--read-only` Start the API in read-only mode (default: False)
+- `--watch` Watch for changes and reload (default: False)
+
+## CORS policy
+
+By default, the API allows requests from localhost. You can configure the CORS policy by modifying `CORS_ALLOW_ORIGIN_REGEX` and/or `CORS_ORIGIN_URLS` in `aiida_restapi/config.py`. For more details, see [FastAPI CORS documentation](https://fastapi.tiangolo.com/tutorial/cors/#configure-cors).
 
 ## Examples
 
@@ -42,6 +52,12 @@ See the [examples](https://github.com/aiidateam/aiida-restapi/tree/master/exampl
 ```shell
 git clone https://github.com/aiidateam/aiida-restapi .
 cd aiida-restapi
+```
+
+To reload the API on changes, run:
+
+```shell
+aiida_restapi start --watch
 ```
 
 ### Setting up pre-commit
