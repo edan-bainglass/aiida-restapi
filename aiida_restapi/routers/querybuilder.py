@@ -42,8 +42,8 @@ async def query_builder(
     """Execute a QueryBuilder query based on the provided dictionary."""
     query_dict = query.model_dump()
 
-    limit = query_dict.pop('limit', 10)
-    offset = query_dict.get('offset', 0)
+    limit = query_dict.pop('limit', 10) or 1
+    offset = query_dict.get('offset', 0) or 0
 
     try:
         qb = orm.QueryBuilder.from_dict(query_dict)
