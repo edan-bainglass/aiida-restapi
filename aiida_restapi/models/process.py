@@ -29,6 +29,8 @@ def _process_inputs(inputs: dict[str, t.Any]) -> dict[str, t.Any]:
 
 
 class SubmittedProcess(pdt.BaseModel):
+    """Pydantic model for submitted processes."""
+
     label: str = pdt.Field(
         '',
         description='The label of the process',
