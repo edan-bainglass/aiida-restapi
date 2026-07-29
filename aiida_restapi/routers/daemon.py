@@ -11,6 +11,9 @@ from fastapi import APIRouter
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.models.daemon import DaemonStatus, DaemonWorker
 
+_WORKER_CHANGE_TIMEOUT = 5.0
+_WORKER_POLL_INTERVAL = 0.1
+
 read_router = APIRouter(prefix='/daemon')
 write_router = APIRouter(prefix='/daemon')
 
@@ -116,7 +119,11 @@ async def restart_daemon() -> DaemonStatus:
     return DaemonStatus(running=True, num_workers=client.get_numprocesses()['numprocesses'])
 
 
-def _wait_for_num_workers(target: int, timeout: float = 5.0, interval: float = 0.1) -> int:
+def _wait_for_num_workers(
+    target: int,
+    timeout: float = _WORKER_CHANGE_TIMEOUT,
+    interval: float = _WORKER_POLL_INTERVAL,
+) -> int:
     """Wait for the daemon worker count to reach ``target`` and return the observed value."""
     deadline = time.monotonic() + timeout
     client = get_daemon_client()
