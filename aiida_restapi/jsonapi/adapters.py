@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import typing as t
+from copy import deepcopy
 
 from aiida import orm
-from fastapi.datastructures import URL
 from starlette.requests import Request
 
 from aiida_restapi.common.pagination import PaginatedResults
@@ -33,8 +33,6 @@ class JsonApiAdapter:
         'nodes': hooks.NodeHook,
         'links': hooks.LinkHook,
     }
-
-    BASE_API_URL = ''
 
     @classmethod
     def register_hooks(cls, new_hooks: dict[str, type[hooks.BaseHook]]) -> None:
@@ -73,19 +71,17 @@ class JsonApiAdapter:
         :return: The JSON:API document.
         :rtype: JsonApiResponse
         """
-        base_api = cls._base_api_url(request)
-
         resource, included = cls._build_resource(
+            request,
             result,
             resource_identity,
             resource_type,
-            base_api,
-            include=include,
+            include,
         )
 
         return {
             'links': {
-                'self': str(request.url),
+                'self': cls._build_link(request),
             },
             'data': resource,
             'included': included or None,
@@ -123,18 +119,16 @@ class JsonApiAdapter:
         :return: The JSON:API document.
         :rtype: JsonApiResponse
         """
-        base_api = cls._base_api_url(request)
-
         hook = cls._hook_for(parent_type)
 
         included = (
             [
                 cls._to_resource(
+                    request,
                     included_identifier,
                     included_attributes,
                     included_foreign_fields,
                     included_type,
-                    base_api,
                 )
                 for (
                     included_identifier,
@@ -151,16 +145,16 @@ class JsonApiAdapter:
         )
 
         child_resource = cls._to_child_resource(
+            request,
             result,
-            pid=pid,
-            parent_type=parent_type,
-            child_type=child_type,
-            base_api=base_api,
+            pid,
+            parent_type,
+            child_type,
         )
 
         return {
             'links': {
-                'self': str(request.url),
+                'self': cls._build_link(request),
             },
             'data': child_resource,
             'included': included or None,
@@ -196,8 +190,6 @@ class JsonApiAdapter:
         :rtype: JsonApiResponse
         """
 
-        base_api = cls._base_api_url(request)
-
         resources: list[dict[str, t.Any]] = []
         included: list[dict[str, t.Any]] = []
 
@@ -205,12 +197,12 @@ class JsonApiAdapter:
 
         for result in results.data:
             resource, included_items = cls._build_resource(
+                request,
                 result,
                 resource_identity,
                 resource_type,
-                base_api,
-                include=query_params.include,
-                cache=included_cache,
+                query_params.include,
+                included_cache,
             )
             resources.append(resource)
             included.extend(included_items)
@@ -223,9 +215,9 @@ class JsonApiAdapter:
 
         toplevel_links = cls._build_toplevel_links(
             request,
-            total=results.total,
-            page=query_params.page,
-            page_size=query_params.page_size,
+            results.total,
+            query_params.page,
+            query_params.page_size,
         )
 
         return {
@@ -236,38 +228,25 @@ class JsonApiAdapter:
         }
 
     @classmethod
-    def _base_api_url(cls, request: Request) -> str:
-        """Return the base API URL from the request.
-
-        :param request: The incoming request.
-        :type request: Request
-        :return: The base API URL.
-        :rtype: str
-        """
-        if not cls.BASE_API_URL:
-            base = str(request.base_url).rstrip('/')
-            cls.BASE_API_URL = f'{base}/{API_CONFIG["PREFIX"].lstrip("/")}'
-        return cls.BASE_API_URL
-
-    @classmethod
     def _build_resource(
         cls,
+        request: Request,
         result: dict[str, t.Any],
         resource_identity: str,
         resource_type: str,
-        base_api: str,
         include: list[str] | None = None,
         cache: IncludedItemParamsCache | None = None,
     ) -> tuple[dict[str, t.Any], list[dict[str, t.Any]]]:
         """Build a JSON:API resource and its included related resources.
+
+        :param request: The incoming request.
+        :type request: Request
         :param result: The result to convert.
         :type result: dict[str, t.Any]
         :param resource_identity: The identity field to use for the resource.
         :type resource_identity: str
         :param resource_type: The resource type to use for the resource.
         :type resource_type: str
-        :param base_api: The base API URL.
-        :type base_api: str
         :param include: A list of related resource types to include.
         :type include: list[str] | None
         :param cache: An optional cache for included resources.
@@ -287,11 +266,11 @@ class JsonApiAdapter:
         included = (
             [
                 cls._to_resource(
+                    request,
                     included_identifier,
                     included_attributes,
                     included_foreign_fields,
                     included_type,
-                    base_api,
                 )
                 for (
                     included_identifier,
@@ -309,11 +288,11 @@ class JsonApiAdapter:
         )
 
         resource = cls._to_resource(
+            request,
             identifier,
             attributes,
             foreign_fields,
             resource_type,
-            base_api,
         )
 
         return resource, included
@@ -332,18 +311,16 @@ class JsonApiAdapter:
     @classmethod
     def _to_resource(
         cls,
+        request: Request,
         identifier: str | int,
         attributes: dict[str, t.Any],
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api: str,
     ) -> dict[str, t.Any]:
         """Convert an AiiDA quantity to a JSON:API resource.
 
-        :param result: The result dictionary to convert.
-        :type result: dict[str, t.Any]
-        :param base_api: The base API URL.
-        :type base_api: str
+        :param request: The incoming request.
+        :type request: Request
         :param resource_identity: The identity field to use for the resource.
         :type resource_identity: str
         :param resource_type: The resource type to use for the resource.
@@ -354,15 +331,15 @@ class JsonApiAdapter:
         hook = cls._hook_for(resource_type)
 
         links = hook.links(
+            request,
             resource_type=resource_type,
-            base_api_url=base_api,
             url_id=str(identifier),
         )
 
         relationships = hook.relationships(
+            request,
             foreign_fields=foreign_fields,
             resource_type=resource_type,
-            base_api_url=base_api,
             url_id=str(identifier),
         )
 
@@ -377,15 +354,16 @@ class JsonApiAdapter:
     @classmethod
     def _to_child_resource(
         cls,
+        request: Request,
         result: dict[str, t.Any],
-        *,
         pid: str | int,
         parent_type: str,
         child_type: str,
-        base_api: str,
     ) -> dict[str, t.Any]:
-        """Convert an dependent quantity to a single resource JSON:API document.
+        """Convert a dependent quantity to a single resource JSON:API document.
 
+        :param request: The incoming request.
+        :type request: Request
         :param result: The result dictionary to convert.
         :type result: dict[str, t.Any]
         :param pid: The parent resource identifier.
@@ -394,12 +372,10 @@ class JsonApiAdapter:
         :type parent_type: str
         :param child_type: The child resource type.
         :type child_type: str
-        :param base_api: The base API URL.
-        :type base_api: str
         :return: The JSON:API resource object.
         :rtype: dict[str, t.Any]
         """
-        root = f'{base_api}/{parent_type}'
+        root = f'{request.scope["root_path"]}{API_CONFIG["PREFIX"]}/{parent_type}'
 
         return {
             'id': pid,
@@ -425,20 +401,20 @@ class JsonApiAdapter:
     def _build_toplevel_links(
         cls,
         request: Request,
-        page_size: int,
-        page: int,
         total: int,
+        page: int,
+        page_size: int,
     ) -> dict[str, str]:
         """Return dict suitable for JSON:API top-level links (self/next/prev/first/last).
 
         :param request: The incoming request.
         :type request: Request
-        :param page_size: The page size.
-        :type page_size: int
-        :param page: The current page.
-        :type page: int
         :param total: The total number of items.
         :type total: int
+        :param page: The current page.
+        :type page: int
+        :param page_size: The page size.
+        :type page_size: int
         :return: The top-level links.
         :rtype: dict[str, str]
         """
@@ -447,36 +423,42 @@ class JsonApiAdapter:
         links: dict[str, str] = {'self': str(current)}
 
         if page > 1:
-            links['prev'] = str(cls._build_link(request, page=page - 1, page_size=page_size))
-            links['first'] = str(cls._build_link(request, page=1, page_size=page_size))
+            links['prev'] = cls._build_link(request, page=page - 1, page_size=page_size)
+            links['first'] = cls._build_link(request, page=1, page_size=page_size)
 
         last_page = (total + page_size - 1) // page_size if page_size > 0 else 1
         if last_page >= 1:
-            links['last'] = str(cls._build_link(request, page=last_page, page_size=page_size))
+            links['last'] = cls._build_link(request, page=last_page, page_size=page_size)
 
         if page < last_page:
-            links['next'] = str(cls._build_link(request, page=page + 1, page_size=page_size))
+            links['next'] = cls._build_link(request, page=page + 1, page_size=page_size)
 
         return links
 
     @staticmethod
-    def _build_link(request: Request, **updates: str | int | None) -> URL:
-        """Return a URL with updated query parameters.
+    def _build_link(request: Request, page: int | None = None, page_size: int | None = None) -> str:
+        """Return a relative URL with updated query parameters.
 
         :param request: The incoming request.
         :type request: Request
-        :param updates: The query parameter updates.
-        :type updates: dict[str, str | int | None]
-        :return: The updated URL.
-        :rtype: URL
+        :param page: The current page.
+        :type page: int | None
+        :param page_size: The page size.
+        :type page_size: int | None
+        :return: The updated URL relative to the base URL.
+        :rtype: str
         """
-        url = request.url
-        q = dict(request.query_params)
+        q = deepcopy(dict(request.query_params))
 
-        for k, v in updates.items():
-            if v is None:
-                q.pop(k, None)
-            else:
-                q[k] = str(v)
+        if page is not None:
+            q['page'] = str(page)
+        if page_size is not None:
+            q['page_size'] = str(page_size)
 
-        return url.replace_query_params(**q)
+        url = request.url.replace_query_params(**q)
+
+        link = url.path
+        if url.query:
+            link += f'?{url.query}'
+
+        return link

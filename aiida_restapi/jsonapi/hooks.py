@@ -4,6 +4,7 @@ import typing as t
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
+from fastapi import Request
 
 from .utils import IncludedItemParamsCache
 
@@ -52,17 +53,16 @@ class BaseHook:
     @classmethod
     def links(
         cls,
-        *,
+        request: Request,
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, str | dict[str, t.Any]]:
         """Return link dictionary for the resource.
 
+        :param request: The incoming request.
+        :type request: Request
         :param resource_type: The type of the resource.
         :type resource_type: str
-        :param base_api_url: The base URL of the API.
-        :type base_api_url: str
         :param url_id: The URL identifier of the resource.
         :type url_id: str
         :return: A dictionary of links.
@@ -73,20 +73,20 @@ class BaseHook:
     @classmethod
     def relationships(
         cls,
+        request: Request,
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
         """Return relationships dictionary for the resource.
 
+        :param request: The incoming request.
+        :type request: Request
         :param foreign_fields: The foreign fields of the resource.
         :type foreign_fields: dict[str, t.Any]
         :param resource_type: The type of the resource.
         :type resource_type: str
-        :param base_api_url: The base URL of the API.
-        :type base_api_url: str
         :param url_id: The URL identifier of the resource.
         :type url_id: str
         :return: A dictionary of relationships.
@@ -171,28 +171,29 @@ class ResourceHook(BaseHook):
     @classmethod
     def links(
         cls,
-        *,
+        request: Request,
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, str | dict[str, t.Any]]:
+        api_path = request.app.state.api_path
         return {
-            'self': f'{base_api_url}/{resource_type}/{url_id}',
+            'self': f'{api_path}/{resource_type}/{url_id}',
         }
 
     @classmethod
     def relationships(
         cls,
+        request: Request,
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        api_path = request.app.state.api_path
         return {
             'collection': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}',
+                    'related': f'{api_path}/{resource_type}',
                 }
             }
         }
@@ -222,24 +223,25 @@ class ComputerHook(EntityHook):
     @classmethod
     def relationships(
         cls,
+        request: Request,
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        api_path = request.app.state.api_path
         extra = {
             'metadata': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/metadata',
+                    'related': f'{api_path}/{resource_type}/{url_id}/metadata',
                 }
             },
         }
         return (
             super().relationships(
+                request,
                 foreign_fields=foreign_fields,
                 resource_type=resource_type,
-                base_api_url=base_api_url,
                 url_id=url_id,
             )
             | extra
@@ -254,16 +256,17 @@ class GroupHook(EntityHook):
     @classmethod
     def relationships(
         cls,
+        request: Request,
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        api_path = request.app.state.api_path
         extra = {
             'user': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/user',
+                    'related': f'{api_path}/{resource_type}/{url_id}/user',
                 },
                 'data': {
                     'id': str(foreign_fields.get('user')),
@@ -272,20 +275,20 @@ class GroupHook(EntityHook):
             },
             'nodes': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/nodes',
+                    'related': f'{api_path}/{resource_type}/{url_id}/nodes',
                 }
             },
             'extras': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/extras',
+                    'related': f'{api_path}/{resource_type}/{url_id}/extras',
                 }
             },
         }
         return (
             super().relationships(
+                request,
                 foreign_fields=foreign_fields,
                 resource_type=resource_type,
-                base_api_url=base_api_url,
                 url_id=url_id,
             )
             | extra
@@ -300,16 +303,17 @@ class NodeHook(EntityHook):
     @classmethod
     def relationships(
         cls,
+        request: Request,
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        api_path = request.app.state.api_path
         extra = {
             'user': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/user',
+                    'related': f'{api_path}/{resource_type}/{url_id}/user',
                 },
                 'data': {
                     'id': str(foreign_fields.get('user')),
@@ -323,7 +327,7 @@ class NodeHook(EntityHook):
         if computer_id is not None:
             extra['computer'] = {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/computer',
+                    'related': f'{api_path}/{resource_type}/{url_id}/computer',
                 },
                 'data': {
                     'id': str(computer_id),
@@ -334,41 +338,41 @@ class NodeHook(EntityHook):
         extra |= {
             'groups': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/groups',
+                    'related': f'{api_path}/{resource_type}/{url_id}/groups',
                 }
             },
             'attributes': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/attributes',
+                    'related': f'{api_path}/{resource_type}/{url_id}/attributes',
                 }
             },
             'extras': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/extras',
+                    'related': f'{api_path}/{resource_type}/{url_id}/extras',
                 }
             },
             'repository_metadata': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/repo/metadata',
+                    'related': f'{api_path}/{resource_type}/{url_id}/repo/metadata',
                 }
             },
             'incoming': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/links?direction=incoming',
+                    'related': f'{api_path}/{resource_type}/{url_id}/links?direction=incoming',
                 }
             },
             'outgoing': {
                 'links': {
-                    'related': f'{base_api_url}/{resource_type}/{url_id}/links?direction=outgoing',
+                    'related': f'{api_path}/{resource_type}/{url_id}/links?direction=outgoing',
                 }
             },
         }
 
         return (
             super().relationships(
+                request,
                 foreign_fields=foreign_fields,
                 resource_type=resource_type,
-                base_api_url=base_api_url,
                 url_id=url_id,
             )
             | extra
@@ -388,17 +392,18 @@ class LinkHook(BaseHook):
     @classmethod
     def relationships(
         cls,
+        request: Request,
         *,
         foreign_fields: dict[str, t.Any],
         resource_type: str,
-        base_api_url: str,
         url_id: str,
     ) -> dict[str, dict[str, t.Any]]:
+        api_path = request.app.state.api_path
         extra = {}
         if source := foreign_fields.get('source', None):
             extra['source'] = {
                 'links': {
-                    'related': f'{base_api_url}/nodes/{source}',
+                    'related': f'{api_path}/nodes/{source}',
                 },
                 'data': {
                     'id': str(source),
@@ -408,7 +413,7 @@ class LinkHook(BaseHook):
         if target := foreign_fields.get('target', None):
             extra['target'] = {
                 'links': {
-                    'related': f'{base_api_url}/nodes/{target}',
+                    'related': f'{api_path}/nodes/{target}',
                 },
                 'data': {
                     'id': str(target),

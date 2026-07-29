@@ -45,10 +45,9 @@ async def get_server_endpoints(request: Request) -> dict[str, list[dict]]:
             continue
 
         group, methods, description = _get_route_parts(route)
-        base_url = str(request.base_url).rstrip('/')
 
         endpoint = {
-            'path': base_url + route.path,
+            'path': request.scope['root_path'] + route.path,
             'group': group,
             'methods': methods,
             'description': description,
@@ -67,7 +66,6 @@ async def get_server_endpoints(request: Request) -> dict[str, list[dict]]:
 async def get_server_endpoints_table(request: Request) -> HTMLResponse:
     """Get an HTML table of all registered API routes."""
     routes = request.app.routes
-    base_url = str(request.base_url).rstrip('/')
 
     rows = []
 
@@ -75,7 +73,7 @@ async def get_server_endpoints_table(request: Request) -> HTMLResponse:
         if route.path == '/':
             continue
 
-        path = base_url + route.path
+        path = request.scope['root_path'] + route.path
         group, methods, description = _get_route_parts(route)
 
         disable_url = (
