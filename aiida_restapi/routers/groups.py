@@ -9,6 +9,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from fastapi import APIRouter, Depends, Query, Request
 
 from aiida_restapi.common import query
+from aiida_restapi.common.types import EntityIdentifier
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.jsonapi.models.aiida import (
@@ -85,7 +86,7 @@ async def get_groups(
 
 
 @read_router.get(
-    '/{uuid}',
+    '/{identifier}',
     response_class=JsonApiResponse,
     response_model=GroupResourceDocument,
     response_model_exclude_none=True,
@@ -98,14 +99,14 @@ async def get_groups(
 @with_dbenv()
 async def get_group(
     request: Request,
-    uuid: str,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA group by uuid."""
-    result = service.get_one(uuid)
+    """Get AiiDA group."""
+    result = service.get_one(identifier)
     return JsonApi.resource(
         request,
         result,
@@ -116,7 +117,7 @@ async def get_group(
 
 
 @read_router.get(
-    '/{uuid}/user',
+    '/{identifier}/user',
     response_class=JsonApiResponse,
     response_model=UserResourceDocument,
     response_model_exclude_none=True,
@@ -127,9 +128,12 @@ async def get_group(
     },
 )
 @with_dbenv()
-async def get_group_user(request: Request, uuid: str) -> dict[str, t.Any]:
+async def get_group_user(
+    request: Request,
+    identifier: EntityIdentifier,
+) -> dict[str, t.Any]:
     """Get the user associated with a group."""
-    user = service.get_related_one(uuid, orm.User)
+    user = service.get_related_one(identifier, orm.User)
     return JsonApi.resource(
         request,
         user,
@@ -139,7 +143,7 @@ async def get_group_user(request: Request, uuid: str) -> dict[str, t.Any]:
 
 
 @read_router.get(
-    '/{uuid}/nodes',
+    '/{identifier}/nodes',
     response_class=JsonApiResponse,
     response_model=NodeCollectionDocument,
     response_model_exclude_none=True,
@@ -155,14 +159,14 @@ async def get_group_user(request: Request, uuid: str) -> dict[str, t.Any]:
 @with_dbenv()
 async def get_group_nodes(
     request: Request,
-    uuid: str,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.CollectionQueryParams,
         Depends(query.collection_query_params),
     ],
 ) -> dict[str, t.Any]:
     """Get the nodes of a group."""
-    nodes = service.get_related_many(uuid, orm.Node, query_params)
+    nodes = service.get_related_many(identifier, orm.Node, query_params)
     return JsonApi.collection(
         request,
         nodes,
@@ -173,7 +177,7 @@ async def get_group_nodes(
 
 
 @read_router.get(
-    '/{uuid}/extras',
+    '/{identifier}/extras',
     response_class=JsonApiResponse,
     response_model=JsonApiResourceDocument,
     response_model_exclude_none=True,
@@ -189,18 +193,19 @@ async def get_group_nodes(
 @with_dbenv()
 async def get_group_extras(
     request: Request,
-    uuid: str,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
     """Get the extras of a group."""
-    extras = service.get_field(uuid, 'extras')
+    group = service.load_one(identifier)
+    extras = service.get_field(identifier, 'extras')
     return JsonApi.child_resource(
         request,
         extras,
-        pid=uuid,
+        pid=group.uuid,
         parent_type='groups',
         child_type='extras',
         include=query_params.include,

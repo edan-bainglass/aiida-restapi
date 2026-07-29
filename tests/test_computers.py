@@ -38,7 +38,21 @@ def test_get_computer(client: TestClient, default_computers: list[int | None]):
         assert response.status_code == 200
 
 
+def test_get_computer_by_pk(client: TestClient):
+    """Test retrieving a computer by PK."""
+    computer = orm.Computer(
+        label='test_computer_pk',
+        hostname='localhost',
+        transport_type='core.local',
+        scheduler_type='core.direct',
+    ).store()
+    response = client.get(f'/computers/{computer.pk}')
+    assert response.status_code == 200
+    assert response.json()['data']['id'] == str(computer.pk)
+
+
 def test_get_computer_metadata(client: TestClient):
+    """Test retrieving the metadata of a single computer."""
     metadata = {
         'workdir': '/tmp/aiida',
         'minimum_scheduler_poll_interval': 15,

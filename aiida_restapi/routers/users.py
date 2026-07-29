@@ -79,7 +79,7 @@ async def get_users(
 
 
 @read_router.get(
-    '/{pk}',
+    '/{identifier}',
     response_class=JsonApiResponse,
     response_model=UserResourceDocument,
     response_model_exclude_none=True,
@@ -92,14 +92,14 @@ async def get_users(
 @with_dbenv()
 async def get_user(
     request: Request,
-    pk: int,
+    identifier: int,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA user by pk."""
-    result = service.get_one(pk)
+    """Get AiiDA user."""
+    result = service.get_one(identifier)
     return JsonApi.resource(
         request,
         result,

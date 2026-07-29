@@ -113,7 +113,7 @@ def default_computers():
         scheduler_type='core.pbspro',
     ).store()
 
-    return [comp_1.pk, comp_2.pk]
+    return [comp_1.uuid, comp_2.uuid]
 
 
 @pytest.fixture(scope='function')

@@ -377,6 +377,8 @@ class JsonApiAdapter:
         """
         root = f'{request.scope["root_path"]}{API_CONFIG["PREFIX"]}/{parent_type}'
 
+        pid = str(pid)  # ensure pid is a string for URL construction
+
         return {
             'id': pid,
             'type': child_type,
@@ -390,7 +392,7 @@ class JsonApiAdapter:
                         'related': f'{root}/{pid}',
                     },
                     'data': {
-                        'id': str(pid),
+                        'id': pid,
                         'type': parent_type,
                     },
                 }
