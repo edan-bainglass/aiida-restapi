@@ -39,7 +39,7 @@ def test_get_group(client: TestClient, default_groups: list[str]):
 
 
 def test_get_group_by_pk(client: TestClient):
-    """Test retrieving a group by PK on UUID route."""
+    """Test retrieving a group by PK."""
     group = orm.Group(label='test_group_pk').store()
     response = client.get(f'/groups/{group.pk}')
     assert response.status_code == 200

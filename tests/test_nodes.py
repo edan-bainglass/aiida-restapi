@@ -239,7 +239,7 @@ def test_get_node(client: TestClient, default_nodes: list[str | None]):
 
 
 def test_get_node_by_pk(client: TestClient):
-    """Test retrieving a node by PK on UUID route."""
+    """Test retrieving a node by PK."""
     node = orm.Int(value=11).store()
     response = client.get(f'/nodes/{node.pk}')
     assert response.status_code == 200
@@ -260,7 +260,7 @@ def test_get_node_user(client: TestClient):
     assert response.json()['data']['attributes']['email'] == node.user.email
 
 
-def test_get_node_computer(client: TestClient, default_computers: list[int | None]):
+def test_get_node_computer(client: TestClient, default_computers: list[str]):
     """Test retrieving the computer of a single node."""
     computer = orm.load_computer(default_computers[0])
     node = orm.Int(value=5, computer=computer).store()
@@ -416,15 +416,16 @@ def test_create_node_constructor_not_supported(client: TestClient):
 
 
 @pytest.mark.anyio
-async def test_create_code(async_client: AsyncClient, default_computers: list[int | None]):
+async def test_create_code(async_client: AsyncClient, default_computers: list[str]):
     """Test creating a new Code."""
     for comp_id in default_computers:
+        computer = orm.load_computer(comp_id)
         response = await async_client.post(
             '/nodes',
             json={
                 'node_type': 'data.core.code.installed.InstalledCode.',
                 'label': 'test_code',
-                'computer': comp_id,
+                'computer': computer.pk,
                 'attributes': {
                     'filepath_executable': '/bin/true',
                 },
@@ -707,7 +708,6 @@ def test_create_node_wrong_value(client: TestClient, node_type: str, value: t.An
     assert response.status_code == 422, response.content
 
 
-@pytest.mark.usefixtures('default_computers')
 def test_create_unknown_entry_point(client: TestClient):
     """Test error message when specifying unknown ``entry_point``."""
     response = client.post(
@@ -720,7 +720,6 @@ def test_create_unknown_entry_point(client: TestClient):
     assert response.status_code == 422, response.content
 
 
-@pytest.mark.usefixtures('default_computers')
 def test_create_additional_attribute(client: TestClient):
     """Test adding additional properties are rejected."""
     response = client.post(
