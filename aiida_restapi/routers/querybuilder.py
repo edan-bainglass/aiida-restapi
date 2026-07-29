@@ -102,7 +102,7 @@ def normalize_result(
     for tag, projections in result.items():
         if len(projections) == 1 and '*' in projections:
             result[tag] = projections['*'].serialize(minimal=minimal)
-            break
+            continue
 
         normalized: dict[str, dict[str, t.Any]] = {}
         for key, projection in projections.items():
