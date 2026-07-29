@@ -9,6 +9,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from fastapi import APIRouter, Depends, Query, Request
 
 from aiida_restapi.common import query
+from aiida_restapi.common.types import EntityIdentifier
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.jsonapi.models.aiida import ComputerCollectionDocument, ComputerResourceDocument
@@ -80,7 +81,7 @@ async def get_computers(
 
 
 @read_router.get(
-    '/{pk}',
+    '/{identifier}',
     response_class=JsonApiResponse,
     response_model=ComputerResourceDocument,
     response_model_exclude_none=True,
@@ -93,14 +94,14 @@ async def get_computers(
 @with_dbenv()
 async def get_computer(
     request: Request,
-    pk: int,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA computer by pk."""
-    result = service.get_one(pk)
+    """Get AiiDA computer."""
+    result = service.get_one(identifier)
     return JsonApi.resource(
         request,
         result,
@@ -111,7 +112,7 @@ async def get_computer(
 
 
 @read_router.get(
-    '/{pk}/metadata',
+    '/{identifier}/metadata',
     response_class=JsonApiResponse,
     response_model=JsonApiResourceDocument,
     response_model_exclude_none=True,
@@ -127,18 +128,19 @@ async def get_computer(
 @with_dbenv()
 async def get_computer_metadata(
     request: Request,
-    pk: int,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get metadata of an AiiDA computer by pk."""
-    metadata = service.get_field(pk, 'metadata')
+    """Get metadata of an AiiDA computer."""
+    computer = service.load_one(identifier)
+    metadata = service.get_field(identifier, 'metadata')
     return JsonApi.child_resource(
         request,
         metadata,
-        pid=pk,
+        pid=computer.uuid,
         parent_type='computers',
         child_type='metadata',
         include=query_params.include,

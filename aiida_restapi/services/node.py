@@ -1,4 +1,4 @@
-"""REST API node repository."""
+"""REST API node service."""
 
 from __future__ import annotations
 

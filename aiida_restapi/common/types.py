@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from uuid import UUID
 
 from aiida import orm
 from fastapi import Request, Response
@@ -13,6 +14,8 @@ EntityModelType = t.TypeVar('EntityModelType', bound='orm.OrmModel')
 
 NodeType = t.TypeVar('NodeType', bound='orm.Node')
 NodeModelType = t.TypeVar('NodeModelType', bound='orm.Node.BaseNodeModel')
+
+EntityIdentifier: t.TypeAlias = int | UUID
 
 RequestValidationErrorHandler = t.Callable[
     [

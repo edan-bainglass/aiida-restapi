@@ -6,7 +6,6 @@ import io
 import json
 import typing as t
 from urllib.parse import quote
-from uuid import UUID
 
 import pydantic as pdt
 from aiida import orm
@@ -20,6 +19,7 @@ from typing_extensions import TypeAlias
 
 from aiida_restapi.common import exceptions as restapi_exceptions
 from aiida_restapi.common import query
+from aiida_restapi.common.types import EntityIdentifier
 from aiida_restapi.config import API_CONFIG
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import aiida, errors
@@ -210,13 +210,13 @@ async def get_node_types() -> list:
 @with_dbenv()
 async def get_node(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA node by identifier (UUID or PK)."""
+    """Get AiiDA node."""
     result = service.get_one(identifier)
     return JsonApi.resource(
         request,
@@ -241,7 +241,7 @@ async def get_node(
 @with_dbenv()
 async def get_node_user(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
 ) -> dict[str, t.Any]:
     """Get the user associated with a node."""
     user = service.get_related_one(identifier, orm.User)
@@ -267,7 +267,7 @@ async def get_node_user(
 @with_dbenv()
 async def get_node_computer(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
 ) -> dict[str, t.Any]:
     """Get the computer associated with a node."""
     computer = service.get_related_one(identifier, orm.Computer)
@@ -296,7 +296,7 @@ async def get_node_computer(
 @with_dbenv()
 async def get_node_groups(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.CollectionQueryParams,
         Depends(query.collection_query_params),
@@ -330,7 +330,7 @@ async def get_node_groups(
 @with_dbenv()
 async def get_node_attributes(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
@@ -366,7 +366,7 @@ async def get_node_attributes(
 @with_dbenv()
 async def get_node_extras(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
@@ -399,7 +399,7 @@ async def get_node_extras(
 @with_dbenv()
 async def get_node_links(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     direction: t.Annotated[
         t.Literal['incoming', 'outgoing'],
         Query(description='Specify whether to retrieve incoming or outgoing links.'),
@@ -434,7 +434,7 @@ async def get_node_links(
 @with_dbenv()
 async def get_node_repo_file_metadata(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
@@ -473,7 +473,7 @@ def get_file_download_headers(filename: str) -> dict[str, str]:
 )
 @with_dbenv()
 async def get_node_repo_file_contents(
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     filename: t.Annotated[
         str | None,
         Query(description='Filename of repository content to retrieve'),
@@ -502,7 +502,7 @@ async def get_node_repo_file_contents(
 )
 @with_dbenv()
 async def download_node(
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     format: t.Annotated[
         str | None,
         Query(description='Format to download the node in'),
@@ -692,7 +692,7 @@ async def create_node_with_files(
 @with_dbenv()
 async def update_node(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     model: orm.Node.MutableNodeFields,
 ) -> dict[str, t.Any]:
     """Update the mutable fields of an existing AiiDA node.

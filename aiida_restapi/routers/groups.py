@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import typing as t
-from uuid import UUID
 
 from aiida import orm
 from aiida.cmdline.utils.decorators import with_dbenv
 from fastapi import APIRouter, Depends, Query, Request
 
 from aiida_restapi.common import query
+from aiida_restapi.common.types import EntityIdentifier
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.jsonapi.models.aiida import (
@@ -99,13 +99,13 @@ async def get_groups(
 @with_dbenv()
 async def get_group(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
     ],
 ) -> dict[str, t.Any]:
-    """Get AiiDA group by identifier (UUID or PK)."""
+    """Get AiiDA group."""
     result = service.get_one(identifier)
     return JsonApi.resource(
         request,
@@ -130,7 +130,7 @@ async def get_group(
 @with_dbenv()
 async def get_group_user(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
 ) -> dict[str, t.Any]:
     """Get the user associated with a group."""
     user = service.get_related_one(identifier, orm.User)
@@ -159,7 +159,7 @@ async def get_group_user(
 @with_dbenv()
 async def get_group_nodes(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.CollectionQueryParams,
         Depends(query.collection_query_params),
@@ -193,7 +193,7 @@ async def get_group_nodes(
 @with_dbenv()
 async def get_group_extras(
     request: Request,
-    identifier: int | UUID,
+    identifier: EntityIdentifier,
     query_params: t.Annotated[
         query.ResourceQueryParams,
         Depends(query.resource_query_params),
