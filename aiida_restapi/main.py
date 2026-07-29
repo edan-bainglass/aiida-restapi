@@ -8,10 +8,11 @@ from aiida.common import exceptions as aiida_exceptions
 from aiida.engine.daemon.client import DaemonException
 from fastapi import APIRouter, FastAPI
 from fastapi import exceptions as fastapi_exceptions
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from aiida_restapi.common import exceptions as restapi_exceptions
-from aiida_restapi.config import API_CONFIG
+from aiida_restapi.config import API_CONFIG, CORS_ALLOW_ORIGIN_REGEX, CORS_ORIGIN_URLS
 from aiida_restapi.graphql import main
 from aiida_restapi.jsonapi.utils import jsonapi_error
 from aiida_restapi.routers import computers, daemon, groups, nodes, querybuilder, server, submit, tests, users
@@ -29,6 +30,15 @@ def create_app() -> FastAPI:
 
     app = FastAPI()
     app.state.api_path = f'{root_path}{API_CONFIG["PREFIX"]}'
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=CORS_ALLOW_ORIGIN_REGEX,
+        allow_origins=CORS_ORIGIN_URLS,
+        allow_credentials=True,
+        allow_methods=['*'],
+        allow_headers=['*'],
+    )
 
     api_router = APIRouter(prefix=API_CONFIG['PREFIX'])
 
