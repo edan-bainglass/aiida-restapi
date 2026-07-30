@@ -9,13 +9,14 @@ from aiida.engine.daemon.client import DaemonException
 from fastapi import APIRouter, FastAPI, Request
 from fastapi import exceptions as fastapi_exceptions
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 
 from aiida_restapi.common import exceptions as restapi_exceptions
+from aiida_restapi.common.responses import JsonApiResponse
 from aiida_restapi.common.types import RequestValidationErrorHandler
 from aiida_restapi.config import API_CONFIG, CORS_ALLOW_ORIGIN_REGEX, CORS_ORIGIN_URLS
 from aiida_restapi.graphql import main
-from aiida_restapi.jsonapi.utils import jsonapi_error
+from aiida_restapi.jsonapi.errors import jsonapi_error
 from aiida_restapi.routers import computers, daemon, groups, nodes, querybuilder, server, submit, tests, users
 
 
@@ -95,7 +96,7 @@ def create_app() -> FastAPI:
     async def handle_request_validation_error(
         request: Request,
         exception: fastapi_exceptions.RequestValidationError,
-    ) -> JSONResponse:
+    ) -> JsonApiResponse:
         """Handle request validation errors.
 
         :param request: The request that caused the validation error.
@@ -103,7 +104,7 @@ def create_app() -> FastAPI:
         :param exception: The validation error exception.
         :type exception: fastapi_exceptions.RequestValidationError
         :return: A JSON response containing the error in JSON:API format.
-        :rtype: JSONResponse
+        :rtype: JsonApiResponse
         """
         for handler in request_validation_error_handlers:
             response = handler(request, exception)

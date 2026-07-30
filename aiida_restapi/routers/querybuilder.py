@@ -9,10 +9,10 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from fastapi import APIRouter, Query, Request
 
 from aiida_restapi.common.exceptions import QueryBuilderException
+from aiida_restapi.common.responses import JsonApiResponse
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.jsonapi.models.base import JsonApiResourceDocument
-from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.models.querybuilder import QueryBuilderDict
 
 read_router = APIRouter(prefix='/querybuilder')

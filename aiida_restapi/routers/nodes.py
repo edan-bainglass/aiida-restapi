@@ -11,7 +11,7 @@ import pydantic as pdt
 from aiida import orm
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions as aiida_exceptions
-from fastapi import APIRouter, Body, Depends, Form, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, Form, Query, Request, UploadFile
 from fastapi import exceptions as fastapi_exceptions
 from fastapi.exceptions import ValidationException
 from fastapi.responses import StreamingResponse
@@ -19,13 +19,13 @@ from typing_extensions import TypeAlias
 
 from aiida_restapi.common import exceptions as restapi_exceptions
 from aiida_restapi.common import query
+from aiida_restapi.common.responses import JsonApiResponse, JsonSchemaResponse
 from aiida_restapi.common.types import EntityIdentifier
 from aiida_restapi.config import API_CONFIG
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
+from aiida_restapi.jsonapi.errors import jsonapi_error
 from aiida_restapi.jsonapi.models import aiida, errors
 from aiida_restapi.jsonapi.models.base import JsonApiResourceDocument
-from aiida_restapi.jsonapi.responses import JsonApiResponse
-from aiida_restapi.jsonapi.utils import jsonapi_error
 from aiida_restapi.models.node import NodeModelRegistry, NodeStatistics, NodeType
 from aiida_restapi.services.node import NodeService
 
@@ -50,7 +50,7 @@ else:
 def handle_request_validation_errors(
     request: Request,
     exception: fastapi_exceptions.RequestValidationError,
-) -> Response | None:
+) -> JsonApiResponse | None:
     """Handle special request validation errors cases for node routes.
 
     :param request: The request that caused the validation error.
@@ -58,7 +58,7 @@ def handle_request_validation_errors(
     :param exception: The validation error exception.
     :type exception: fastapi_exceptions.RequestValidationError
     :return: A JSON response containing the error in JSON:API format.
-    :rtype: JSONResponse
+    :rtype: JsonApiResponse
     """
     if request.method == 'POST' and '/nodes' in request.url.path:
         body = getattr(exception, 'body', None)
@@ -75,6 +75,7 @@ def handle_request_validation_errors(
 
 @read_router.get(
     '/schema',
+    response_class=JsonSchemaResponse,
     response_model=dict[str, t.Any],
     responses={
         422: {
@@ -98,10 +99,11 @@ async def get_nodes_schema(
 ) -> dict[str, t.Any]:
     """Get JSON schema for the base AiiDA node 'read' model."""
     if not node_type:
-        return orm.Node.ReadModel.model_json_schema()
-    Model = model_registry.get_model(node_type, which)
-    if not Model:
-        raise restapi_exceptions.SchemaNotSupported(f"'{node_type}' does not support {which} schema")
+        Model = orm.Node.ReadModel if which == 'read' else orm.Node.WriteModel
+    else:
+        Model = model_registry.get_model(node_type, which)
+        if not Model:
+            raise restapi_exceptions.SchemaNotSupported(f"'{node_type}' does not support {which} schema")
     return Model.model_json_schema()
 
 
@@ -116,7 +118,10 @@ async def get_nodes_schema(
 async def get_node_projections(
     node_type: t.Annotated[
         str | None,
-        Query(description='The AiiDA node type string.', alias='type'),
+        Query(
+            description='The AiiDA node type string.',
+            alias='type',
+        ),
     ] = None,
 ) -> list[str]:
     """Get queryable projections for AiiDA nodes."""

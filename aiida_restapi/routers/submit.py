@@ -10,9 +10,9 @@ from aiida.common import exceptions
 from aiida.plugins.entry_point import load_entry_point_from_string
 from fastapi import APIRouter, Request
 
+from aiida_restapi.common.responses import JsonApiResponse
 from aiida_restapi.jsonapi.adapters import JsonApiAdapter as JsonApi
 from aiida_restapi.jsonapi.models import aiida, errors
-from aiida_restapi.jsonapi.responses import JsonApiResponse
 from aiida_restapi.models.process import SubmittedProcess
 
 write_router = APIRouter(prefix='/submit')
