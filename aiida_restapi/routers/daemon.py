@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -119,7 +120,7 @@ async def restart_daemon() -> DaemonStatus:
     return DaemonStatus(running=True, num_workers=client.get_numprocesses()['numprocesses'])
 
 
-def _wait_for_num_workers(
+async def _wait_for_num_workers(
     target: int,
     timeout: float = _WORKER_CHANGE_TIMEOUT,
     interval: float = _WORKER_POLL_INTERVAL,
@@ -136,7 +137,7 @@ def _wait_for_num_workers(
         if time.monotonic() >= deadline:
             return current
 
-        time.sleep(interval)
+        await asyncio.sleep(interval)
 
 
 @write_router.post(
@@ -156,7 +157,7 @@ async def increase_daemon_worker() -> DaemonStatus:
 
     initial = client.get_numprocesses()['numprocesses']
     client.increase_workers(1)
-    num_workers = _wait_for_num_workers(initial + 1)
+    num_workers = await _wait_for_num_workers(initial + 1)
 
     return DaemonStatus(running=True, num_workers=num_workers)
 
@@ -178,6 +179,6 @@ async def decrease_daemon_worker() -> DaemonStatus:
 
     initial = client.get_numprocesses()['numprocesses']
     client.decrease_workers(1)
-    num_workers = _wait_for_num_workers(max(initial - 1, 0))
+    num_workers = await _wait_for_num_workers(max(initial - 1, 0))
 
     return DaemonStatus(running=True, num_workers=num_workers)
