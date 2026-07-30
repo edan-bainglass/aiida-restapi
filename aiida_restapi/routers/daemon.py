@@ -8,7 +8,7 @@ import typing as t
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from aiida_restapi.jsonapi.models import errors
 from aiida_restapi.models.daemon import DaemonStatus, DaemonWorker
@@ -41,15 +41,15 @@ async def get_daemon_status() -> DaemonStatus:
 
 
 @read_router.get(
-    '/worker',
+    '/workers',
     response_model=dict[str, DaemonWorker],
     responses={
         500: {'model': errors.DaemonError},
     },
 )
 @with_dbenv()
-async def get_daemon_worker() -> dict[str, dict[str, t.Any]]:
-    """Return daemon worker metadata."""
+async def get_daemon_workers() -> dict[str, dict[str, t.Any]]:
+    """Return daemon workers metadata."""
     client = get_daemon_client()
 
     if not client.is_daemon_running:
@@ -158,16 +158,24 @@ async def _wait_for_num_workers(
     },
 )
 @with_dbenv()
-async def increase_daemon_worker() -> dict[str, t.Any]:
-    """Increase the number of daemon workers by one."""
+async def increase_daemon_workers(
+    amount: t.Annotated[
+        int,
+        Query(
+            description='The number of workers to increase by',
+            ge=1,
+        ),
+    ] = 1,
+) -> dict[str, t.Any]:
+    """Increase the number of daemon workers by a specified amount (default=1)."""
     client = get_daemon_client()
 
     if not client.is_daemon_running:
         raise DaemonException('The daemon is not running.')
 
     initial = client.get_numprocesses()['numprocesses']
-    client.increase_workers(1)
-    num_workers = await _wait_for_num_workers(initial + 1)
+    client.increase_workers(amount)
+    num_workers = await _wait_for_num_workers(initial + amount)
 
     return {
         'running': True,
@@ -183,16 +191,24 @@ async def increase_daemon_worker() -> dict[str, t.Any]:
     },
 )
 @with_dbenv()
-async def decrease_daemon_worker() -> dict[str, t.Any]:
-    """Decrease the number of daemon workers by one."""
+async def decrease_daemon_workers(
+    amount: t.Annotated[
+        int,
+        Query(
+            description='The number of workers to decrease by',
+            ge=1,
+        ),
+    ] = 1,
+) -> dict[str, t.Any]:
+    """Decrease the number of daemon workers by a specified amount (default=1)."""
     client = get_daemon_client()
 
     if not client.is_daemon_running:
         raise DaemonException('The daemon is not running.')
 
     initial = client.get_numprocesses()['numprocesses']
-    client.decrease_workers(1)
-    num_workers = await _wait_for_num_workers(max(initial - 1, 0))
+    client.decrease_workers(amount)
+    num_workers = await _wait_for_num_workers(max(initial - amount, 0))
 
     return {
         'running': True,

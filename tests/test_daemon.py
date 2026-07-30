@@ -26,17 +26,17 @@ def test_status_and_start(client: TestClient):
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
-def test_worker_when_stopped(client: TestClient):
-    """Test ``/daemon/worker`` when the daemon is not running."""
-    response = client.get('/daemon/worker')
+def test_workers_when_stopped(client: TestClient):
+    """Test ``/daemon/workers`` when the daemon is not running."""
+    response = client.get('/daemon/workers')
     assert response.status_code == 200, response.content
     assert response.json() == {}
 
 
 @pytest.mark.usefixtures('started_daemon_client')
-def test_worker_when_running(client: TestClient):
-    """Test ``/daemon/worker`` when the daemon is running."""
-    response = client.get('/daemon/worker')
+def test_workers_when_running(client: TestClient):
+    """Test ``/daemon/workers`` when the daemon is running."""
+    response = client.get('/daemon/workers')
     assert response.status_code == 200, response.content
 
     results = response.json()
@@ -116,3 +116,25 @@ def test_increase_and_decrease_when_running(client: TestClient):
     results = response.json()
     assert results['running'] is True
     assert results['num_workers'] == initial_workers
+
+
+@pytest.mark.usefixtures('started_daemon_client')
+def test_increase_and_decrease_by_amount(client: TestClient):
+    """Test ``/daemon/increase`` and ``/daemon/decrease`` with a specified amount."""
+    response = client.get('/daemon/status')
+    assert response.status_code == 200, response.content
+    initial_workers = response.json()['num_workers']
+
+    response = client.post('/daemon/increase', params={'amount': 3})
+    assert response.status_code == 200, response.content
+
+    results = response.json()
+    assert results['running'] is True
+    assert results['num_workers'] == initial_workers + 3
+
+    response = client.post('/daemon/decrease', params={'amount': 2})
+    assert response.status_code == 200, response.content
+
+    results = response.json()
+    assert results['running'] is True
+    assert results['num_workers'] == initial_workers + 1
