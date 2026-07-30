@@ -49,6 +49,11 @@ def create_app() -> FastAPI:
         lambda _: RedirectResponse(url=api_router.url_path_for('endpoints')),
     )
 
+    api_router.add_route(
+        API_CONFIG['PREFIX'],
+        lambda _: RedirectResponse(url=api_router.url_path_for('endpoints')),
+    )
+
     request_validation_error_handlers: list[RequestValidationErrorHandler] = []
     for module in (server, users, computers, groups, nodes, querybuilder, submit, daemon, tests):
         if hasattr(module, 'handle_request_validation_errors'):
